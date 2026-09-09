@@ -52,7 +52,7 @@ export default function ProfileMenu({ onLogin, onSignup }: ProfileMenuProps) {
           open ? "ring-2 ring-emerald-400/60" : ""
         }`}
       >
-        <UserIcon className="h-4 w-4" />
+        <UserIcon className="h-4" />
       </button>
 
       {open && (
