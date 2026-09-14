@@ -6,7 +6,7 @@ from datetime import datetime
 import uuid
 
 from sqlalchemy.ext.declarative import declarative_base
-from src.dependencies.db import Base
+from src.database import Base
 
 class User(Base):
     __tablename__ = "users"

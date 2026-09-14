@@ -1,5 +1,5 @@
 from src.auth.auth_service import register_user, login_user
-from src.dependencies.db import get_db
+from src.database import get_db
 from fastapi import Depends
 from sqlalchemy.orm import Session
 from src.auth.auth_schemas import RegisterRequest, LoginRequest
