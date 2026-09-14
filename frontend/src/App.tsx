@@ -3,7 +3,9 @@ import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import { PersistGate } from 'redux-persist/integration/react'
 import './App.css'
 import Homepage from './pages/HomePage'
+import LoginPage from './pages/LoginPage'
 import RAGSystemUI from './pages/RAGSystemUI'
+import SignupPage from './pages/SignupPage'
 import _store, { _persistorStore } from './store'
 
 function About() {
@@ -24,6 +26,8 @@ function App() {
                   <Route path="/about" element={<About />} />
                   <Route path="/contact" element={<Contact />} />
                   <Route path="/rag-agent" element={<RAGSystemUI />} />
+                  <Route path="/login" element={<LoginPage />} />
+                  <Route path="/signup" element={<SignupPage />} />
                </Routes>
             </BrowserRouter>
          </PersistGate>
