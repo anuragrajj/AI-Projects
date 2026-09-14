@@ -2,10 +2,10 @@
 from sqlalchemy.orm import Session
 import bcrypt
 from fastapi import HTTPException
-from src.models.auth_models import User
+from src.auth.auth_models import User
 from datetime import datetime, timedelta, timezone
 from jose import jwt
-from src.schemas.validationSchemas.auth_validation_schema import UserOut
+from src.auth.auth_schemas import UserOut
 
 SECRET_KEY = "supersecret"
 ALGORITHM = "HS256"
