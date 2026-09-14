@@ -4,6 +4,7 @@ import { persistReducer, persistStore } from 'redux-persist';
 import storage from 'redux-persist/lib/storage'; // Use local storage for persistence
 import { api as baseApi } from '../services/httpClient';
 import AuthSlice from './slices/AuthSlice';
+import LoaderSlice from './slices/LoaderSlice';
 
 const persistConfig = {
    key: 'root',
@@ -13,10 +14,11 @@ const persistConfig = {
 
 const appReducer = combineReducers({
    auth: AuthSlice,
+   loader: LoaderSlice,
    [baseApi.reducerPath]: baseApi.reducer,
 });
 
-type RootState = ReturnType<typeof appReducer>;
+export type RootState = ReturnType<typeof appReducer>;
 
 const rootReducer = (state: RootState | undefined, action: AnyAction) => {
    if (action.type === 'RESET_STORE') {
@@ -35,6 +37,8 @@ const _store = configureStore({
       }).concat(baseApi.middleware);
    },
 });
+
+export type AppDispatch = typeof _store.dispatch;
 
 export const _persistorStore = persistStore(_store);
 export default _store;

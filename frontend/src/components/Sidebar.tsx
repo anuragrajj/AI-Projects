@@ -93,18 +93,18 @@ export default function Sidebar({ items, activeId, onSelect }: SidebarProps) {
           </div>
         </div>
 
-        <div>
+        {/* <div>
           <SectionLabel>General</SectionLabel>
           <div className="space-y-1">
             <NavButton icon={GridIcon} label="Explore agents" onClick={() => onSelect("home")} />
             <NavButton icon={SettingsIcon} label="Settings" onClick={() => onSelect("settings")} />
             <NavButton icon={LifeBuoyIcon} label="Help & feedback" onClick={() => onSelect("help")} />
           </div>
-        </div>
+        </div> */}
       </nav>
 
       {/* Workspace / account */}
-      <div className="border-t border-slate-800/70 p-3">
+      {/* <div className="border-t border-slate-800/70 p-3">
         <button className="flex w-full items-center gap-3 rounded-xl px-2 py-2 text-left transition-colors hover:bg-slate-800/60">
           <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 text-slate-900">
             <UserIcon className="h-4 w-4" />
@@ -114,7 +114,7 @@ export default function Sidebar({ items, activeId, onSelect }: SidebarProps) {
             <span className="block truncate text-[11px] text-slate-500">Free plan</span>
           </span>
         </button>
-      </div>
+      </div> */}
     </aside>
   );
 }
