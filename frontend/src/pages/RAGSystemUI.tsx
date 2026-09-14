@@ -2,6 +2,17 @@ import { useEffect, useRef, useState } from "react";
 import type { ChangeEvent, KeyboardEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import ChatSessionSidebar from "../components/ChatSessionSidebar";
+import {
+   CheckIcon,
+   ChevronDownIcon,
+   CpuIcon,
+   FileIcon,
+   InfoIcon,
+   MessageIcon,
+   PanelLeftIcon,
+   SendIcon,
+   UploadIcon,
+} from "../components/icons";
 
 type Doc = {
    id: number | string;
@@ -102,35 +113,34 @@ const DUMMY_SESSIONS: ChatSession[] = [
    },
 ];
 
-const UserIcon = () => (
-   <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 text-sm font-bold text-white">
-      U
-   </div>
-);
-
-const BotIcon = () => (
-   <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border border-slate-700 bg-slate-800">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2">
-         <rect x="3" y="11" width="18" height="10" rx="2" />
-         <circle cx="12" cy="5" r="2" />
-         <path d="M12 7v4" />
-         <line x1="8" y1="16" x2="8" y2="16" strokeWidth="3" strokeLinecap="round" />
-         <line x1="12" y1="16" x2="12" y2="16" strokeWidth="3" strokeLinecap="round" />
-         <line x1="16" y1="16" x2="16" y2="16" strokeWidth="3" strokeLinecap="round" />
-      </svg>
-   </div>
-);
+function Avatar({ role }: { role: "user" | "ai" }) {
+   return (
+      <span
+         className={`grid h-7 w-7 shrink-0 place-items-center rounded-md border text-[11px] font-medium ${
+            role === "user"
+               ? "border-line bg-surface-raised text-ink-muted"
+               : "border-accent/30 bg-accent-soft text-accent"
+         }`}
+      >
+         {role === "user" ? "U" : <CpuIcon className="h-[15px] w-[15px]" />}
+      </span>
+   );
+}
 
 function TypingIndicator() {
    return (
-      <div className="mb-4 flex items-end gap-3">
-         <BotIcon />
-         <div className="rounded-2xl rounded-bl-sm border border-slate-800 bg-slate-900/70 px-4 py-3">
-            <div className="flex h-4 items-center gap-1">
-               <span className="h-2 w-2 animate-bounce rounded-full bg-slate-500" style={{ animationDelay: "0ms" }} />
-               <span className="h-2 w-2 animate-bounce rounded-full bg-slate-500" style={{ animationDelay: "150ms" }} />
-               <span className="h-2 w-2 animate-bounce rounded-full bg-slate-500" style={{ animationDelay: "300ms" }} />
-            </div>
+      <div className="flex gap-3.5">
+         <Avatar role="ai" />
+         <div className="pt-1.5">
+            <span className="flex items-center gap-1">
+               {[0, 1, 2].map((i) => (
+                  <span
+                     key={i}
+                     className="h-1.5 w-1.5 animate-blink rounded-full bg-ink-dim"
+                     style={{ animationDelay: `${i * 160}ms` }}
+                  />
+               ))}
+            </span>
          </div>
       </div>
    );
@@ -183,39 +193,6 @@ export default function RAGSystemUI() {
       }
       document.addEventListener("mousedown", handleClickOutside);
       return () => document.removeEventListener("mousedown", handleClickOutside);
-   }, []);
-
-   // Full-bleed view: index.css / App.css cap and center #root globally. Override
-   // those inline (beats the stylesheet) while this page is mounted, then restore.
-   useEffect(() => {
-      const rootEl = document.getElementById("root");
-      const body = document.body;
-      const prev = {
-         maxWidth: rootEl?.style.maxWidth ?? "",
-         margin: rootEl?.style.margin ?? "",
-         padding: rootEl?.style.padding ?? "",
-         width: rootEl?.style.width ?? "",
-         textAlign: rootEl?.style.textAlign ?? "",
-         bodyDisplay: body.style.display,
-      };
-      if (rootEl) {
-         rootEl.style.maxWidth = "none";
-         rootEl.style.margin = "0";
-         rootEl.style.padding = "0";
-         rootEl.style.width = "100%";
-         rootEl.style.textAlign = "left";
-      }
-      body.style.display = "block";
-      return () => {
-         if (rootEl) {
-            rootEl.style.maxWidth = prev.maxWidth;
-            rootEl.style.margin = prev.margin;
-            rootEl.style.padding = prev.padding;
-            rootEl.style.width = prev.width;
-            rootEl.style.textAlign = prev.textAlign;
-         }
-         body.style.display = prev.bodyDisplay;
-      };
    }, []);
 
    // Keep the active session's transcript in sync with the visible messages.
@@ -354,14 +331,7 @@ export default function RAGSystemUI() {
    };
 
    return (
-      <div className="relative flex h-screen overflow-hidden bg-[#080b13] font-sans text-slate-300">
-         {/* ── Ambient background glow ── */}
-         <div className="pointer-events-none absolute inset-0 overflow-hidden">
-            <div className="absolute -left-32 -top-32 h-80 w-80 rounded-full bg-indigo-600/20 blur-3xl" />
-            <div className="absolute right-0 top-1/3 h-80 w-80 rounded-full bg-violet-600/10 blur-3xl" />
-            <div className="absolute -bottom-24 left-1/3 h-72 w-72 rounded-full bg-emerald-600/10 blur-3xl" />
-         </div>
-
+      <div className="relative flex h-screen overflow-hidden bg-canvas text-ink-muted">
          {/* ── Chat session rail ── */}
          <ChatSessionSidebar
             sessions={sessions}
@@ -375,58 +345,55 @@ export default function RAGSystemUI() {
          />
 
          <div className="relative z-10 flex min-w-0 flex-1 flex-col">
-            {/* ── Header ── */}
-           
-
             {/* ── Toolbar ── */}
-            <div className="flex flex-shrink-0 flex-wrap items-center gap-3 border-b border-slate-800/70 bg-slate-950/40 px-4 py-3 backdrop-blur-xl sm:px-6">
-               <span className="mr-1 text-[11px] font-semibold uppercase tracking-wider text-slate-600">Context</span>
+            <div className="flex flex-shrink-0 flex-wrap items-center gap-2.5 border-b border-line bg-surface px-4 py-3 sm:px-6">
+               {!sidebarOpen && (
+                  <button
+                     onClick={() => setSidebarOpen(true)}
+                     aria-label="Open sidebar"
+                     className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-line text-ink-dim transition-colors duration-150 hover:border-line-strong hover:text-ink"
+                  >
+                     <PanelLeftIcon className="h-4 w-4" />
+                  </button>
+               )}
+
+               <span className="label mr-1 hidden sm:block">Context</span>
 
                {/* Document Dropdown */}
                <div className="relative" ref={dropdownRef}>
                   <button
                      onClick={() => setDropdownOpen((o) => !o)}
-                     className="flex min-w-[13rem] items-center gap-2 rounded-xl border border-slate-800 bg-slate-900/70 px-3 py-2 text-sm text-slate-200 transition-colors hover:border-indigo-500/60 hover:bg-slate-900"
+                     className="flex min-w-[14rem] items-center gap-2.5 rounded-lg border border-line bg-surface-raised px-3 py-2 text-[13px] text-ink transition-colors duration-150 hover:border-line-strong"
                   >
-                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#818cf8" strokeWidth="2">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                        <polyline points="14 2 14 8 20 8" />
-                     </svg>
+                     <FileIcon className="h-4 w-4 shrink-0 text-accent" />
                      <span className="flex-1 truncate text-left">{selectedDoc.name}</span>
-                     <svg
-                        width="12"
-                        height="12"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="#64748b"
-                        strokeWidth="2.5"
-                        className={`transition-transform duration-200 ${dropdownOpen ? "rotate-180" : ""}`}
-                     >
-                        <polyline points="6 9 12 15 18 9" />
-                     </svg>
+                     <ChevronDownIcon
+                        className={`h-3.5 w-3.5 shrink-0 text-ink-dim transition-transform duration-150 ${
+                           dropdownOpen ? "rotate-180" : ""
+                        }`}
+                     />
                   </button>
 
                   {dropdownOpen && (
-                     <div className="absolute left-0 top-full z-30 mt-2 w-72 overflow-hidden rounded-xl border border-slate-800 bg-slate-900/95 shadow-2xl shadow-black/50 backdrop-blur-xl">
-                        <div className="border-b border-slate-800 px-3 py-2">
-                           <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Select document</p>
+                     <div className="absolute left-0 top-full z-30 mt-2 w-80 animate-fade-up overflow-hidden rounded-xl border border-line bg-surface-raised shadow-pop">
+                        <div className="border-b border-line px-3 py-2.5">
+                           <p className="label">Select document</p>
                         </div>
-                        <div className="max-h-56 overflow-y-auto p-1">
+                        <div className="max-h-64 overflow-y-auto p-1">
                            {uploadedDocs.map((doc) => (
                               <button
                                  key={doc.id}
                                  onClick={() => { setSelectedDoc(doc); setDropdownOpen(false); }}
-                                 className={`flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm transition-colors ${selectedDoc.id === doc.id ? "bg-indigo-500/15 text-indigo-300" : "text-slate-300 hover:bg-slate-800"}`}
+                                 className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-[13px] transition-colors duration-150 ${
+                                    selectedDoc.id === doc.id
+                                       ? "bg-surface-hover text-ink"
+                                       : "text-ink-muted hover:bg-surface-hover hover:text-ink"
+                                 }`}
                               >
-                                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                                    <polyline points="14 2 14 8 20 8" />
-                                 </svg>
+                                 <FileIcon className="h-4 w-4 shrink-0 text-ink-faint" />
                                  <span className="truncate">{doc.name}</span>
                                  {selectedDoc.id === doc.id && (
-                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#818cf8" strokeWidth="2.5" className="ml-auto flex-shrink-0">
-                                       <polyline points="20 6 9 17 4 12" />
-                                    </svg>
+                                    <CheckIcon className="ml-auto h-3.5 w-3.5 shrink-0 text-accent" />
                                  )}
                               </button>
                            ))}
@@ -438,88 +405,84 @@ export default function RAGSystemUI() {
                {/* Upload Button */}
                <button
                   onClick={() => fileInputRef.current?.click()}
-                  className="flex items-center gap-2 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 px-3.5 py-2 text-sm font-medium text-white shadow-lg shadow-indigo-500/25 transition-transform hover:-translate-y-0.5"
+                  className="flex items-center gap-2 rounded-lg bg-accent px-3.5 py-2 text-[13px] font-semibold text-accent-fg transition-colors duration-150 hover:bg-accent-hover"
                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
-                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                     <polyline points="17 8 12 3 7 8" />
-                     <line x1="12" y1="3" x2="12" y2="15" />
-                  </svg>
+                  <UploadIcon className="h-4 w-4" />
                   Upload PDF
                </button>
                <input ref={fileInputRef} type="file" accept=".pdf" className="hidden" onChange={handleFileUpload} />
 
-               <div className="ml-auto flex items-center gap-1.5 text-xs text-slate-500">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2">
-                     <circle cx="12" cy="12" r="10" />
-                     <line x1="12" y1="8" x2="12" y2="12" />
-                     <line x1="12" y1="16" x2="12.01" y2="16" />
-                  </svg>
-                  {uploadedDocs.length} document{uploadedDocs.length !== 1 ? "s" : ""} loaded
+               <div className="ml-auto flex items-center gap-2 text-[12px] text-ink-dim">
+                  <InfoIcon className="h-3.5 w-3.5" />
+                  <span className="tabular">
+                     {uploadedDocs.length} document{uploadedDocs.length !== 1 ? "s" : ""} loaded
+                  </span>
                </div>
             </div>
 
             {/* ── Chat Area ── */}
-            <div className="flex-1 overflow-y-auto px-4 py-6">
-               <div className="mx-auto max-w-3xl">
-                  {/* Context pill */}
-                  <div className="mb-6 flex justify-center">
-                     <span className="inline-flex items-center gap-1.5 rounded-full border border-indigo-500/30 bg-indigo-500/10 px-3 py-1.5 text-xs text-indigo-200">
-                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#818cf8" strokeWidth="2">
-                           <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                           <polyline points="14 2 14 8 20 8" />
-                        </svg>
-                        Chatting with <span className="font-semibold text-indigo-300">{selectedDoc.name}</span>
-                     </span>
-                  </div>
-
-                  {messages.length === 0 && !isTyping && (
-                     <div className="mt-16 text-center">
-                        <div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 shadow-lg shadow-indigo-500/30">
-                           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
-                              <path d="M21 12a8 8 0 0 1-11.6 7.1L4 20.5l1.4-4.3A8 8 0 1 1 21 12Z" />
-                           </svg>
-                        </div>
-                        <p className="mt-4 text-sm font-medium text-slate-300">Ask anything about your document</p>
-                        <p className="mt-1 text-xs text-slate-500">Your questions and answers stay in this chat.</p>
+            <div className="flex-1 overflow-y-auto px-4 py-8 sm:px-6">
+               <div className="mx-auto max-w-2xl">
+                  {messages.length === 0 && !isTyping ? (
+                     <div className="mt-24 text-center">
+                        <span className="mx-auto grid h-11 w-11 place-items-center rounded-xl border border-line bg-surface text-accent">
+                           <MessageIcon className="h-5 w-5" />
+                        </span>
+                        <p className="mt-5 font-display text-[17px] font-semibold tracking-tight text-ink">
+                           Ask anything about your document
+                        </p>
+                        <p className="mt-2 text-[13px] text-ink-dim">
+                           Answers are grounded in{" "}
+                           <span className="text-ink-muted">{selectedDoc.name}</span>
+                        </p>
+                     </div>
+                  ) : (
+                     <div className="mb-8 flex items-center gap-2.5 border-b border-line pb-4">
+                        <FileIcon className="h-3.5 w-3.5 shrink-0 text-ink-faint" />
+                        <p className="label truncate">Chatting with {selectedDoc.name}</p>
                      </div>
                   )}
 
-                  {messages.map((msg) =>
-                     msg.role === "user" ? (
-                        /* User message – right aligned */
-                        <div key={msg.id} className="mb-4 flex items-end justify-end gap-3">
-                           <div className="max-w-lg">
-                              <p className="mb-1 mr-1 text-right text-[11px] text-slate-500">You</p>
-                              <div className="rounded-2xl rounded-br-sm bg-gradient-to-br from-indigo-500 to-violet-600 px-4 py-3 text-sm leading-relaxed text-white shadow-lg shadow-indigo-900/30">
-                                 {msg.content}
-                              </div>
-                           </div>
-                           <UserIcon />
-                        </div>
-                     ) : (
-                        /* AI message – left aligned */
-                        <div key={msg.id} className="mb-4 flex items-end gap-3">
-                           <BotIcon />
-                           <div className="max-w-lg">
-                              <p className="mb-1 ml-1 text-[11px] text-slate-500">DocMind AI</p>
-                              <div className="rounded-2xl rounded-bl-sm border border-slate-800 bg-slate-900/70 px-4 py-3 text-sm leading-relaxed text-slate-200 shadow-lg shadow-black/20">
-                                 {msg.content}
-                              </div>
-                           </div>
-                        </div>
-                     )
-                  )}
+                  <div className="space-y-6">
+                     {messages.map((msg) => {
+                        const isUser = msg.role === "user";
+                        return (
+                           <div
+                              key={msg.id}
+                              className={`flex gap-3 ${isUser ? "justify-end" : "justify-start"}`}
+                           >
+                              {!isUser && <Avatar role="ai" />}
 
-                  {isTyping && <TypingIndicator />}
+                              <div className={`min-w-0 max-w-[80%] ${isUser ? "items-end" : ""}`}>
+                                 <p className={`label mb-1.5 ${isUser ? "text-right" : ""}`}>
+                                    {isUser ? "You" : "DocMind AI"}
+                                 </p>
+                                 <div
+                                    className={`rounded-xl border px-4 py-3 text-[14px] leading-[1.7] text-ink ${
+                                       isUser
+                                          ? "rounded-tr-sm border-accent/30 bg-accent-soft"
+                                          : "rounded-tl-sm border-line bg-surface"
+                                    }`}
+                                 >
+                                    {msg.content}
+                                 </div>
+                              </div>
+
+                              {isUser && <Avatar role="user" />}
+                           </div>
+                        );
+                     })}
+
+                     {isTyping && <TypingIndicator />}
+                  </div>
                   <div ref={messagesEndRef} />
                </div>
             </div>
 
             {/* ── Input Bar ── */}
-            <div className="flex-shrink-0 border-t border-slate-800/70 bg-slate-950/60 px-4 py-4 backdrop-blur-xl">
-               <div className="mx-auto flex max-w-3xl items-end gap-3">
-                  <div className="flex-1 rounded-2xl border border-slate-800 bg-slate-900/70 px-4 py-3 transition-colors duration-150 focus-within:border-indigo-500/70">
+            <div className="flex-shrink-0 border-t border-line bg-surface px-4 py-4 sm:px-6">
+               <div className="mx-auto max-w-2xl">
+                  <div className="flex items-end gap-2.5 rounded-xl border border-line bg-surface-raised px-4 py-3 transition-colors duration-150 focus-within:border-accent/50">
                      <textarea
                         rows={1}
                         value={input}
@@ -530,23 +493,22 @@ export default function RAGSystemUI() {
                         }}
                         onKeyDown={handleKeyDown}
                         placeholder={`Ask anything about ${selectedDoc.name}…`}
-                        className="w-full resize-none bg-transparent text-sm leading-relaxed text-slate-100 outline-none placeholder:text-slate-500"
+                        className="w-full resize-none bg-transparent py-1 text-[14px] leading-relaxed text-ink outline-none placeholder:text-ink-faint"
                         style={{ maxHeight: "120px" }}
                      />
+                     <button
+                        onClick={handleSend}
+                        disabled={!input.trim() || isTyping}
+                        aria-label="Send message"
+                        className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-accent text-accent-fg transition-colors duration-150 hover:bg-accent-hover disabled:bg-surface-hover disabled:text-ink-faint"
+                     >
+                        <SendIcon className="h-4 w-4" />
+                     </button>
                   </div>
-                  <button
-                     onClick={handleSend}
-                     disabled={!input.trim() || isTyping}
-                     aria-label="Send message"
-                     className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-lg shadow-indigo-900/40 transition-all duration-150 hover:-translate-y-0.5 disabled:translate-y-0 disabled:cursor-not-allowed disabled:from-slate-700 disabled:to-slate-700 disabled:shadow-none"
-                  >
-                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
-                        <line x1="22" y1="2" x2="11" y2="13" />
-                        <polygon points="22 2 15 22 11 13 2 9 22 2" />
-                     </svg>
-                  </button>
+                  <p className="mt-2.5 text-center font-mono text-[10px] uppercase tracking-label text-ink-faint">
+                     Enter to send · Shift + Enter for new line
+                  </p>
                </div>
-               <p className="mt-2 text-center text-[11px] text-slate-600">Press Enter to send · Shift+Enter for new line</p>
             </div>
          </div>
       </div>

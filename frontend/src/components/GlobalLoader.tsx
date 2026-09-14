@@ -11,8 +11,15 @@ export default function GlobalLoader() {
   if (!isLoading) return null;
 
   return (
-    <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-700 border-t-indigo-500" />
+    <div
+      role="status"
+      aria-live="polite"
+      className="fixed inset-0 z-[999] flex items-center justify-center bg-canvas/80 animate-fade-in"
+    >
+      <div className="flex flex-col items-center gap-4">
+        <span className="h-7 w-7 animate-spin rounded-full border-2 border-line-strong border-t-accent" />
+        <span className="label">Working</span>
+      </div>
     </div>
   );
 }

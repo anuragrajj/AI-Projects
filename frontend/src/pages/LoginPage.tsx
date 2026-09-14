@@ -3,11 +3,12 @@ import type { FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import AuthShell from "../components/AuthShell";
-import { BoltIcon, LockIcon, UserIcon } from "../components/icons";
+import { BoltIcon } from "../components/icons";
 import { loginRequest } from "../services/authApi";
 import { login } from "../store/slices/AuthSlice";
 import type { AppDispatch } from "../store";
 import { setLoading } from "../store/slices/LoaderSlice";
+
 export default function LoginPage() {
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
@@ -38,88 +39,98 @@ export default function LoginPage() {
     <AuthShell>
       <div className="w-full">
         {/* Brand — mobile / small screens only, since AuthShell's left panel covers this on lg+ */}
-        <div className="mb-8 flex items-center justify-center gap-3 lg:hidden">
-          <div className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 shadow-lg shadow-indigo-500/30">
-            <BoltIcon className="h-5 w-5 text-white" />
-          </div>
-          <span className="text-sm font-semibold text-white">Agent Hub</span>
+        <div className="mb-10 flex items-center gap-2.5 lg:hidden">
+          <span className="grid h-7 w-7 place-items-center rounded-md bg-accent text-accent-fg">
+            <BoltIcon className="h-4 w-4" strokeWidth={2} />
+          </span>
+          <span className="font-display text-[15px] font-semibold tracking-tight text-ink">
+            Agent Hub
+          </span>
         </div>
 
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-8 shadow-2xl shadow-black/30 backdrop-blur-xl sm:p-9">
-          <div className="mb-6 text-center">
-            <h1 className="text-xl font-semibold text-white">Welcome back</h1>
-            <p className="mt-1 text-sm text-slate-500">Log in to continue to your workspace</p>
-          </div>
+        <p className="label">Sign in</p>
+        <h1 className="mt-3 font-display text-[28px] font-semibold tracking-tight text-ink">
+          Welcome back
+        </h1>
+        <p className="mt-2 text-[13.5px] text-ink-dim">
+          Log in to continue to your workspace.
+        </p>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <Field
-              label="Email"
-              type="email"
-              value={email}
-              onChange={setEmail}
-              placeholder="you@example.com"
-              autoComplete="email"
-            />
-            <Field
-              label="Password"
-              type="password"
-              value={password}
-              onChange={setPassword}
-              placeholder="••••••••"
-              autoComplete="current-password"
-            />
+        <form onSubmit={handleSubmit} className="mt-9 space-y-5">
+          <Field
+            label="Email"
+            type="email"
+            value={email}
+            onChange={setEmail}
+            placeholder="you@example.com"
+            autoComplete="email"
+          />
+          <Field
+            label="Password"
+            type="password"
+            value={password}
+            onChange={setPassword}
+            placeholder="••••••••"
+            autoComplete="current-password"
+          />
 
-            <div className="flex items-center justify-between text-xs">
-              <label className="flex items-center gap-2 text-slate-500">
-                <input
-                  type="checkbox"
-                  className="h-3.5 w-3.5 rounded border-slate-700 bg-slate-800 accent-indigo-500"
-                />
-                Remember me
-              </label>
-              <button type="button" className="font-medium text-indigo-300 hover:text-indigo-200">
-                Forgot password?
-              </button>
-            </div>
-
-            {error && (
-              <p className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-300">
-                {error}
-              </p>
-            )}
-
+          <div className="flex items-center justify-between">
+            <label className="flex items-center gap-2 text-[12.5px] text-ink-dim">
+              <input
+                type="checkbox"
+                className="h-3.5 w-3.5 rounded border-line bg-surface accent-accent"
+              />
+              Remember me
+            </label>
             <button
-              type="submit"
-              disabled={loading}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-500/25 transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
+              type="button"
+              className="text-[12.5px] font-medium text-ink-muted transition-colors duration-150 hover:text-accent"
             >
-              <LockIcon className="h-4 w-4" />
-              {loading ? "Logging in..." : "Log in"}
+              Forgot password?
             </button>
-          </form>
-
-          <div className="my-6 flex items-center gap-3">
-            <div className="h-px flex-1 bg-slate-800" />
-            <span className="text-[11px] uppercase tracking-wider text-slate-600">or</span>
-            <div className="h-px flex-1 bg-slate-800" />
           </div>
+
+          {error && (
+            <p
+              role="alert"
+              className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-3.5 py-2.5 text-[12.5px] text-rose-300"
+            >
+              {error}
+            </p>
+          )}
 
           <button
-            type="button"
-            className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-800 bg-slate-900/60 px-4 py-2.5 text-sm font-medium text-slate-300 transition-colors hover:border-slate-700 hover:bg-slate-800/60"
+            type="submit"
+            disabled={loading}
+            className="flex w-full items-center justify-center gap-2 rounded-lg bg-accent px-4 py-2.5 text-[13.5px] font-semibold text-accent-fg transition-colors duration-150 hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-55"
           >
-            <UserIcon className="h-4 w-4" />
-            Continue as guest
+            {loading && (
+              <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-accent-fg/30 border-t-accent-fg" />
+            )}
+            {loading ? "Signing in…" : "Sign in"}
           </button>
+        </form>
+
+        <div className="my-7 flex items-center gap-4">
+          <span className="h-px flex-1 bg-line" />
+          <span className="label">or</span>
+          <span className="h-px flex-1 bg-line" />
         </div>
 
-        <p className="mt-6 text-center text-sm text-slate-500">
+        <button
+          type="button"
+          className="w-full rounded-lg border border-line bg-surface px-4 py-2.5 text-[13.5px] font-medium text-ink-muted transition-colors duration-150 hover:border-line-strong hover:text-ink"
+        >
+          Continue as guest
+        </button>
+
+        <p className="mt-8 text-[13px] text-ink-dim">
           Don&apos;t have an account?{" "}
           <button
             onClick={() => navigate("/signup")}
-            className="font-semibold text-indigo-300 hover:text-indigo-200"
+            className="font-medium text-ink transition-colors duration-150 hover:text-accent"
           >
-            Sign up
+            Create one
           </button>
         </p>
       </div>
@@ -144,14 +155,14 @@ function Field({
 }) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-xs font-medium text-slate-400">{label}</span>
+      <span className="mb-2 block text-[12.5px] font-medium text-ink-muted">{label}</span>
       <input
         type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         autoComplete={autoComplete}
-        className="w-full rounded-xl border border-slate-800 bg-slate-950/60 px-3.5 py-2.5 text-sm text-slate-100 outline-none transition-colors placeholder:text-slate-600 focus:border-indigo-500/60"
+        className="w-full rounded-lg border border-line bg-surface px-3.5 py-2.5 text-[13.5px] text-ink outline-none transition-colors duration-150 placeholder:text-ink-faint hover:border-line-strong focus:border-accent/60"
       />
     </label>
   );

@@ -1,13 +1,5 @@
 import type { IconType } from "./icons";
-import {
-  BoltIcon,
-  GridIcon,
-  HomeIcon,
-  LifeBuoyIcon,
-  PlusIcon,
-  SettingsIcon,
-  UserIcon,
-} from "./icons";
+import { BoltIcon, HomeIcon, PlusIcon } from "./icons";
 
 export type SidebarItem = {
   id: string;
@@ -28,20 +20,17 @@ type SidebarProps = {
  */
 export default function Sidebar({ items, activeId, onSelect }: SidebarProps) {
   return (
-    <aside className="sticky top-0 flex h-screen w-64 shrink-0 flex-col border-r border-slate-800/70 bg-slate-950/70 backdrop-blur-xl">
-      {/* Brand */}
-      <div className="flex items-center gap-3 px-5 pb-5 pt-6">
-        <div className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 shadow-lg shadow-indigo-500/30">
-          <BoltIcon className="h-5 w-5 text-white" />
-        </div>
-        <div className="leading-tight">
-          {/* TODO: swap for your product name */}
-          <p className="text-sm font-semibold text-white">Agent Hub</p>
-          <p className="text-[11px] text-slate-500">AI agents &amp; chatbots</p>
-        </div>
+    <aside className="sticky top-0 hidden h-screen w-[248px] shrink-0 flex-col border-r border-line bg-surface md:flex">
+      <div className="flex items-center gap-2.5 border-b border-line px-5 py-[18px]">
+        <span className="grid h-7 w-7 place-items-center rounded-md bg-accent text-accent-fg">
+          <BoltIcon className="h-4 w-4" strokeWidth={2} />
+        </span>
+        <span className="font-display text-[15px] font-semibold tracking-tight text-ink">
+          Agent Hub
+        </span>
       </div>
 
-      <nav className="flex-1 space-y-7 overflow-y-auto px-3 py-2">
+      <nav className="flex-1 overflow-y-auto px-3 py-4">
         <NavButton
           active={activeId === "home"}
           icon={HomeIcon}
@@ -49,81 +38,46 @@ export default function Sidebar({ items, activeId, onSelect }: SidebarProps) {
           onClick={() => onSelect("home")}
         />
 
-        <div>
-          <SectionLabel>Agents</SectionLabel>
-          <div className="space-y-1">
-            {items.map((item) => {
-              const Icon = item.icon;
-              const active = activeId === item.id;
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => onSelect(item.id)}
-                  className={`group flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-medium transition-colors ${
-                    active
-                      ? "bg-slate-800 text-white"
-                      : "text-slate-400 hover:bg-slate-800/60 hover:text-slate-100"
+        <p className="label px-3 pb-2 pt-6">Agents</p>
+        <div className="space-y-0.5">
+          {items.map((item) => {
+            const Icon = item.icon;
+            const active = activeId === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => onSelect(item.id)}
+                className={`group relative flex w-full items-center gap-2.5 rounded-lg py-2 pl-3 pr-2.5 text-left text-[13.5px] transition-colors duration-150 ${
+                  active
+                    ? "bg-surface-raised font-medium text-ink"
+                    : "text-ink-muted hover:bg-surface-raised/60 hover:text-ink"
+                }`}
+              >
+                {active && (
+                  <span className="absolute left-0 top-1/2 h-4 w-[2px] -translate-y-1/2 rounded-r bg-accent" />
+                )}
+                <Icon
+                  className={`h-[17px] w-[17px] shrink-0 transition-colors duration-150 ${
+                    active ? "text-accent" : "text-ink-dim group-hover:text-ink-muted"
                   }`}
-                >
-                  <span
-                    className={`grid h-7 w-7 shrink-0 place-items-center rounded-lg border transition-colors ${
-                      active
-                        ? "border-indigo-400/40 bg-indigo-500/15 text-indigo-300"
-                        : "border-slate-700/70 bg-slate-800/40 text-slate-400 group-hover:text-slate-100"
-                    }`}
-                  >
-                    <Icon className="h-4 w-4" />
-                  </span>
-                  <span className="flex-1 truncate">{item.name}</span>
-                  {item.status === "soon" && (
-                    <span className="rounded-md bg-slate-800 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-                      Soon
-                    </span>
-                  )}
-                </button>
-              );
-            })}
+                />
+                <span className="flex-1 truncate">{item.name}</span>
+                {item.status === "soon" && <span className="label">Soon</span>}
+              </button>
+            );
+          })}
 
-            <div className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-slate-600">
-              <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg border border-dashed border-slate-700/70">
-                <PlusIcon className="h-4 w-4" />
-              </span>
-              <span>More on the way</span>
-            </div>
+          <div className="flex items-center gap-2.5 rounded-lg py-2 pl-3 pr-2.5 text-[13.5px] text-ink-faint">
+            <PlusIcon className="h-[17px] w-[17px] shrink-0" />
+            <span>More on the way</span>
           </div>
         </div>
-
-        {/* <div>
-          <SectionLabel>General</SectionLabel>
-          <div className="space-y-1">
-            <NavButton icon={GridIcon} label="Explore agents" onClick={() => onSelect("home")} />
-            <NavButton icon={SettingsIcon} label="Settings" onClick={() => onSelect("settings")} />
-            <NavButton icon={LifeBuoyIcon} label="Help & feedback" onClick={() => onSelect("help")} />
-          </div>
-        </div> */}
       </nav>
 
-      {/* Workspace / account */}
-      {/* <div className="border-t border-slate-800/70 p-3">
-        <button className="flex w-full items-center gap-3 rounded-xl px-2 py-2 text-left transition-colors hover:bg-slate-800/60">
-          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 text-slate-900">
-            <UserIcon className="h-4 w-4" />
-          </span>
-          <span className="min-w-0 flex-1 leading-tight">
-            <span className="block truncate text-sm font-medium text-slate-200">Your workspace</span>
-            <span className="block truncate text-[11px] text-slate-500">Free plan</span>
-          </span>
-        </button>
-      </div> */}
+      <div className="border-t border-line px-5 py-3.5">
+        <p className="label">v0.1 · Preview</p>
+      </div>
     </aside>
-  );
-}
-
-function SectionLabel({ children }: { children: string }) {
-  return (
-    <p className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-600">
-      {children}
-    </p>
   );
 }
 
@@ -141,13 +95,20 @@ function NavButton({
   return (
     <button
       onClick={onClick}
-      className={`flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-colors ${
+      className={`group relative flex w-full items-center gap-2.5 rounded-lg py-2 pl-3 pr-2.5 text-[13.5px] transition-colors duration-150 ${
         active
-          ? "bg-slate-800 text-white"
-          : "text-slate-400 hover:bg-slate-800/60 hover:text-slate-100"
+          ? "bg-surface-raised font-medium text-ink"
+          : "text-ink-muted hover:bg-surface-raised/60 hover:text-ink"
       }`}
     >
-      <Icon className="h-[18px] w-[18px]" />
+      {active && (
+        <span className="absolute left-0 top-1/2 h-4 w-[2px] -translate-y-1/2 rounded-r bg-accent" />
+      )}
+      <Icon
+        className={`h-[17px] w-[17px] shrink-0 transition-colors duration-150 ${
+          active ? "text-accent" : "text-ink-dim group-hover:text-ink-muted"
+        }`}
+      />
       {label}
     </button>
   );

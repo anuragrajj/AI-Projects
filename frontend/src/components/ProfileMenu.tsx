@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
+import type { IconType } from "./icons";
 import { LogInIcon, LogOutIcon, UserIcon, UserPlusIcon } from "./icons";
 import type { RootState, AppDispatch } from "../store";
 import { logout } from "../store/slices/AuthSlice";
@@ -56,6 +57,8 @@ export default function ProfileMenu({ onLogin, onSignup }: ProfileMenuProps) {
     navigate("/login");
   };
 
+  const initial = user?.name?.trim()?.[0]?.toUpperCase();
+
   return (
     <div ref={containerRef} className="relative">
       <button
@@ -64,89 +67,103 @@ export default function ProfileMenu({ onLogin, onSignup }: ProfileMenuProps) {
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label="Account menu"
-        className={`grid h-9 w-9 place-items-center rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 text-slate-900 outline-none transition-shadow focus-visible:ring-2 focus-visible:ring-emerald-400/60 ${
-          open ? "ring-2 ring-emerald-400/60" : ""
+        className={`grid h-9 w-9 place-items-center rounded-lg border text-[13px] font-medium transition-colors duration-150 ${
+          open
+            ? "border-line-strong bg-surface-hover text-ink"
+            : "border-line bg-surface-raised text-ink-muted hover:border-line-strong hover:text-ink"
         }`}
       >
-        <UserIcon className="h-4" />
+        {isAuthenticated && initial ? initial : <UserIcon className="h-[17px] w-[17px]" />}
       </button>
 
       {open && (
         <div
           role="menu"
-          className="absolute right-0 z-30 mt-2 w-48 overflow-hidden rounded-xl border border-slate-800 bg-slate-900/95 p-1 shadow-2xl shadow-black/50 backdrop-blur-xl"
+          className="absolute right-0 z-30 mt-2 w-56 animate-fade-up overflow-hidden rounded-xl border border-line bg-surface-raised p-1 shadow-pop"
         >
-          <div className="px-3 py-2">
-            <p className="truncate text-sm font-medium text-white">
-              {isAuthenticated && user ? user.name : "Welcome"}
-            </p>
-            {!isAuthenticated && (
-              <p className="text-[11px] text-slate-500">Sign in to save your work</p>
+          <div className="px-3 py-2.5">
+            {isAuthenticated && user ? (
+              <>
+                <p className="truncate text-[13.5px] font-medium text-ink">{user.name}</p>
+                <p className="truncate font-mono text-[11px] text-ink-dim">{user.email}</p>
+              </>
+            ) : (
+              <>
+                <p className="text-[13.5px] font-medium text-ink">Not signed in</p>
+                <p className="text-[11px] text-ink-dim">Sign in to save your work</p>
+              </>
             )}
           </div>
-          <div className="my-1 h-px bg-slate-800" />
+
+          <div className="my-1 h-px bg-line" />
 
           {isAuthenticated ? (
-            <button
-              type="button"
-              role="menuitem"
-              onClick={() => select(() => setConfirmOpen(true))}
-              className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-medium text-slate-300 transition-colors hover:bg-slate-800 hover:text-white"
-            >
-              <LogOutIcon className="h-4 w-4 text-slate-400" />
-              Logout
-            </button>
+            <MenuItem icon={LogOutIcon} label="Log out" onClick={() => select(() => setConfirmOpen(true))} />
           ) : (
             <>
-              <button
-                type="button"
-                role="menuitem"
-                onClick={() => select(onLogin)}
-                className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-medium text-slate-300 transition-colors hover:bg-slate-800 hover:text-white"
-              >
-                <LogInIcon className="h-4 w-4 text-slate-400" />
-                Login
-              </button>
-              <button
-                type="button"
-                role="menuitem"
-                onClick={() => select(onSignup)}
-                className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-medium text-slate-300 transition-colors hover:bg-slate-800 hover:text-white"
-              >
-                <UserPlusIcon className="h-4 w-4 text-slate-400" />
-                Sign up
-              </button>
+              <MenuItem icon={LogInIcon} label="Log in" onClick={() => select(onLogin)} />
+              <MenuItem icon={UserPlusIcon} label="Create account" onClick={() => select(onSignup)} />
             </>
           )}
         </div>
       )}
 
       {confirmOpen && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="w-full max-w-sm rounded-2xl border border-slate-800 bg-slate-900 p-5 shadow-2xl">
-            <h2 className="text-base font-semibold text-white">Log out?</h2>
-            <p className="mt-1.5 text-sm text-slate-400">
-              You'll need to sign in again to access your workspace.
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-canvas/80 p-4 animate-fade-in">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="logout-title"
+            className="w-full max-w-sm animate-fade-up rounded-xl border border-line bg-surface-raised p-6 shadow-pop"
+          >
+            <h2 id="logout-title" className="font-display text-lg font-semibold tracking-tight text-ink">
+              Log out?
+            </h2>
+            <p className="mt-2 text-[13.5px] leading-relaxed text-ink-muted">
+              Your session token will be cleared from this device. You'll need to sign in again to
+              reach your workspace.
             </p>
-            <div className="mt-5 flex justify-end gap-2">
+            <div className="mt-6 flex justify-end gap-2">
               <button
                 type="button"
                 onClick={() => setConfirmOpen(false)}
-                className="rounded-lg px-3 py-2 text-sm font-medium text-slate-300 transition-colors hover:bg-slate-800 hover:text-white"
+                className="rounded-lg border border-line px-3.5 py-2 text-[13px] font-medium text-ink-muted transition-colors duration-150 hover:border-line-strong hover:text-ink"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={confirmLogout}
-                className="rounded-lg bg-red-500/90 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-500"
+                className="rounded-lg bg-rose-500 px-3.5 py-2 text-[13px] font-semibold text-white transition-colors duration-150 hover:bg-rose-400"
               >
-                Logout
+                Log out
               </button>
             </div>
           </div>
         </div>
       )}
     </div>
+  );
+}
+
+function MenuItem({
+  icon: Icon,
+  label,
+  onClick,
+}: {
+  icon: IconType;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      role="menuitem"
+      onClick={onClick}
+      className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-[13.5px] text-ink-muted transition-colors duration-150 hover:bg-surface-hover hover:text-ink"
+    >
+      <Icon className="h-4 w-4 text-ink-dim" />
+      {label}
+    </button>
   );
 }

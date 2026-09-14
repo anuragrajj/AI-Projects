@@ -1,8 +1,10 @@
 import { useNavigate } from "react-router-dom";
+import { useSelector } from "react-redux";
 import AgentCard from "../components/AgentCard";
 import type { Agent } from "../components/AgentCard";
 import ProfileMenu from "../components/ProfileMenu";
 import Sidebar from "../components/Sidebar";
+import type { RootState } from "../store";
 import {
   BriefcaseIcon,
   ChartIcon,
@@ -22,8 +24,6 @@ const LIVE_AGENTS: Agent[] = [
       "Upload PDFs, notes or reports and ask questions in plain language. Answers come back grounded in your files, with the passages they were drawn from.",
     tags: ["PDF & docs", "Citations", "Semantic search"],
     icon: DocChatIcon,
-    accent: "from-indigo-500 to-violet-600",
-    glow: "hover:shadow-indigo-500/20",
     status: "live",
     route: "/rag-agent",
   },
@@ -35,8 +35,6 @@ const LIVE_AGENTS: Agent[] = [
       "Drop in your resume and let the agent surface roles that fit your experience, flag the gaps, and tailor your application to each posting.",
     tags: ["Resume parsing", "Job search", "Skill matching"],
     icon: BriefcaseIcon,
-    accent: "from-emerald-500 to-teal-600",
-    glow: "hover:shadow-emerald-500/20",
     status: "live",
     route: "/resume-jobs",
   },
@@ -52,8 +50,6 @@ const UPCOMING_AGENTS: Agent[] = [
       "Turn transcripts and recordings into clean summaries, decisions and action items ready to share with your team.",
     tags: ["Transcripts", "Action items"],
     icon: SparkleIcon,
-    accent: "from-amber-500 to-orange-600",
-    glow: "",
     status: "soon",
     route: "",
   },
@@ -65,8 +61,6 @@ const UPCOMING_AGENTS: Agent[] = [
       "Ask questions about a repository and get answers with links to the exact files and lines involved.",
     tags: ["Code search", "Repo-aware"],
     icon: GridIcon,
-    accent: "from-sky-500 to-blue-600",
-    glow: "",
     status: "soon",
     route: "",
   },
@@ -78,8 +72,6 @@ const UPCOMING_AGENTS: Agent[] = [
       "Connect a spreadsheet or CSV and ask for charts, trends and plain-English explanations of the numbers.",
     tags: ["CSV & sheets", "Charts"],
     icon: ChartIcon,
-    accent: "from-rose-500 to-pink-600",
-    glow: "",
     status: "soon",
     route: "",
   },
@@ -94,6 +86,7 @@ function greetingForNow(): string {
 
 export default function HomePage() {
   const navigate = useNavigate();
+  const user = useSelector((state: RootState) => state.auth.user);
 
   const openRoute = (route: string) => {
     if (route) navigate(route);
@@ -109,95 +102,82 @@ export default function HomePage() {
   };
 
   return (
-    <div className="flex min-h-screen bg-[#080b13] text-slate-300">
-      {/*
-        index.css / App.css constrain and center #root globally. Neutralise that
-        for this full-bleed layout only while the homepage is mounted — React
-        removes this <style> again on navigation, so no other page is touched.
-      */}
-      <style>{`
-        #root { max-width: none; margin: 0; padding: 0; text-align: left; }
-        body { display: block; }
-      `}</style>
-
+    <div className="flex min-h-screen bg-canvas text-ink-muted">
       <Sidebar items={LIVE_AGENTS} activeId="home" onSelect={handleSelect} />
 
-      <main className="relative flex-1 overflow-hidden">
-        {/* Ambient background glow */}
-        <div className="pointer-events-none absolute inset-0 overflow-hidden">
-          <div className="absolute -left-24 -top-24 h-72 w-72 rounded-full bg-indigo-600/20 blur-3xl" />
-          <div className="absolute right-0 top-40 h-80 w-80 rounded-full bg-violet-600/10 blur-3xl" />
-          <div className="absolute bottom-0 left-1/3 h-72 w-72 rounded-full bg-emerald-600/10 blur-3xl" />
-        </div>
+      <main className="flex min-w-0 flex-1 flex-col">
+        {/* Top bar */}
+        <header className="sticky top-0 z-20 flex items-center gap-4 border-b border-line bg-canvas/90 px-6 py-3.5 backdrop-blur md:px-10">
+          <p className="flex-1 truncate text-[13.5px] text-ink-muted">
+            {greetingForNow()}
+            {user?.name ? <span className="text-ink">, {user.name}</span> : null}
+          </p>
 
-        <div className="relative h-screen overflow-y-auto">
-          <div className="mx-auto max-w-6xl px-6 py-4 md:px-10">
-            {/* Top bar */}
-            <header className="flex flex-wrap items-center justify-between gap-4">
-              <div>
-                <p className="text-sm text-slate-500">{greetingForNow()} 👋</p>
-                <h1 className="mt-0.5 text-lg font-semibold text-white">Your workspace</h1>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="hidden items-center gap-2 rounded-xl border border-slate-800 bg-slate-900/60 px-3 py-2 text-sm text-slate-500 sm:flex">
-                  <SearchIcon className="h-4 w-4" />
-                  <span>Search agents</span>
-                  <kbd className="ml-4 rounded border border-slate-700 bg-slate-800 px-1.5 text-[11px] text-slate-400">
-                    /
-                  </kbd>
-                </div>
-                <ProfileMenu
-                  onLogin={() => navigate("/login")}
-                  onSignup={() => navigate("/signup")}
-                />
-              </div>
-            </header>
+          <button
+            type="button"
+            className="hidden items-center gap-2.5 rounded-lg border border-line bg-surface px-3 py-2 text-[13px] text-ink-dim transition-colors duration-150 hover:border-line-strong hover:text-ink-muted sm:flex"
+          >
+            <SearchIcon className="h-4 w-4" />
+            Search agents
+            <kbd className="ml-6 rounded border border-line px-1.5 font-mono text-[10px] text-ink-faint">
+              /
+            </kbd>
+          </button>
 
+          <ProfileMenu onLogin={() => navigate("/login")} onSignup={() => navigate("/signup")} />
+        </header>
+
+        <div className="relative flex-1">
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-64 bg-dots mask-fade-b opacity-70" />
+
+          <div className="relative mx-auto w-full max-w-6xl px-6 pb-20 md:px-10">
             {/* Hero */}
-            <section className="mt-10 max-w-2xl">
-              <span className="inline-flex items-center gap-2 rounded-full border border-indigo-500/30 bg-indigo-500/10 px-3 py-1 text-xs font-semibold text-indigo-300">
-                <SparkleIcon className="h-3.5 w-3.5" />
-                AI workspace
-              </span>
-              <h2 className="mt-4 text-3xl font-bold leading-tight text-white sm:text-4xl">
-                Meet your AI agents, all in one place.
-              </h2>
-              <p className="mt-3 text-base leading-relaxed text-slate-400">
-                A growing collection of AI agents and RAG chatbots. Pick one from the sidebar or a
-                card below to get started — more are on the way.
+            <section className="max-w-2xl pt-14">
+              <p className="label">AI workspace</p>
+              <h1 className="mt-4 font-display text-[30px] font-semibold leading-[1.1] tracking-tight text-ink sm:text-[40px] lg:text-[46px]">
+                Meet your AI agents,{" "}
+                <br className="hidden sm:block" />
+                all in one place.
+              </h1>
+              <p className="mt-5 max-w-lg text-[15px] leading-relaxed text-ink-muted">
+                A growing collection of AI agents and RAG chatbots. Pick one from the rail or a card
+                below to get started.
               </p>
             </section>
 
             {/* Stats */}
-            <div className="mt-7 flex flex-wrap gap-3">
-              <StatPill value={String(LIVE_AGENTS.length)} label="Agents live" />
-              <StatPill value={String(UPCOMING_AGENTS.length)} label="In development" />
-              <StatPill value="$0.00" label="Your cost today" />
+            <div className="mt-12 grid grid-cols-1 divide-y divide-line rounded-xl border border-line bg-surface sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+              <Stat value={String(LIVE_AGENTS.length)} label="Agents live" />
+              <Stat value={String(UPCOMING_AGENTS.length)} label="In development" />
+              <Stat value="$0.00" label="Cost today" />
             </div>
 
             {/* Available now */}
-            <section className="mt-10">
-              <div className="flex items-baseline justify-between">
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  Available now
-                </h3>
-                <span className="text-xs text-slate-600">{LIVE_AGENTS.length} agents</span>
-              </div>
-              <div className="mt-4 grid gap-5 sm:grid-cols-2">
-                {LIVE_AGENTS.map((agent) => (
-                  <AgentCard key={agent.id} agent={agent} onOpen={() => openRoute(agent.route)} />
+            <section className="mt-16">
+              <SectionHeader title="Available now" meta={`${LIVE_AGENTS.length} agents`} />
+              <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                {LIVE_AGENTS.map((agent, i) => (
+                  <AgentCard
+                    key={agent.id}
+                    agent={agent}
+                    index={i}
+                    onOpen={() => openRoute(agent.route)}
+                  />
                 ))}
               </div>
             </section>
 
             {/* Coming soon */}
-            <section className="mt-12 pb-10">
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                Coming soon
-              </h3>
-              <div className="mt-4 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                {UPCOMING_AGENTS.map((agent) => (
-                  <AgentCard key={agent.id} agent={agent} onOpen={() => undefined} />
+            <section className="mt-14">
+              <SectionHeader title="Coming soon" meta={`${UPCOMING_AGENTS.length} in build`} />
+              <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {UPCOMING_AGENTS.map((agent, i) => (
+                  <AgentCard
+                    key={agent.id}
+                    agent={agent}
+                    index={LIVE_AGENTS.length + i}
+                    onOpen={() => undefined}
+                  />
                 ))}
               </div>
             </section>
@@ -208,11 +188,22 @@ export default function HomePage() {
   );
 }
 
-function StatPill({ value, label }: { value: string; label: string }) {
+function SectionHeader({ title, meta }: { title: string; meta: string }) {
   return (
-    <div className="flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-900/50 px-4 py-2.5">
-      <span className="text-base font-semibold text-white">{value}</span>
-      <span className="text-xs text-slate-500">{label}</span>
+    <div className="flex items-baseline justify-between border-b border-line pb-3">
+      <h2 className="font-display text-[15px] font-semibold tracking-tight text-ink">{title}</h2>
+      <span className="label tabular">{meta}</span>
+    </div>
+  );
+}
+
+function Stat({ value, label }: { value: string; label: string }) {
+  return (
+    <div className="px-6 py-5">
+      <p className="tabular font-display text-[26px] font-semibold tracking-tight text-ink">
+        {value}
+      </p>
+      <p className="label mt-1.5">{label}</p>
     </div>
   );
 }
