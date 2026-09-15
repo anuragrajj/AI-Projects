@@ -4,6 +4,8 @@ import os
 from src.api import api_router
 from fastapi.middleware.cors import CORSMiddleware
 import httpx
+# from src.database import Base, engine
+# from src.auth import auth_models  # noqa: F401 — registers models on Base.metadata
 load_dotenv()  # reads .env file into environment
 
 port = int(os.getenv("PORT", 8000))
@@ -12,6 +14,10 @@ app = FastAPI(
     title="GenAI Project",
     version="1.0.0",
 )
+
+# Creates any tables declared on Base that don't exist yet.
+# Does not alter existing tables — use a migration tool (e.g. Alembic) for schema changes.
+# Base.metadata.create_all(bind=engine)
 
 # Allow all origins for local development — tighten this in production
 app.add_middleware(
