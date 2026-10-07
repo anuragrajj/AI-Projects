@@ -3,20 +3,8 @@ from sqlalchemy.orm import Session
 import bcrypt
 from fastapi import HTTPException
 from src.auth.auth_models import User
-from datetime import datetime, timedelta, timezone
-from jose import jwt
 from src.auth.auth_schemas import UserOut
-
-SECRET_KEY = "supersecret"
-ALGORITHM = "HS256"
-EXPIRE_MINUTES = 60 * 24
-
-def generate_token(user_id: str) -> str:
-    payload = {
-        "id": user_id,
-        "exp": datetime.now(timezone.utc) + timedelta(minutes=EXPIRE_MINUTES),
-    }
-    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+from src.core.security import create_access_token
 
 
 def register_user(db: Session, name: str, email: str, password: str):
@@ -47,7 +35,7 @@ def login_user(db: Session, email: str, password: str):
     if not is_match:
         raise HTTPException(status_code=400, detail="Invalid credentials")
 
-    token = generate_token(str(user.id))
+    token = create_access_token(str(user.id))
 
     return {
         "success": True,

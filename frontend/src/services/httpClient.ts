@@ -47,7 +47,7 @@ const fetchApi = async (
         baseUrl,
         prepareHeaders: (headers) => {
             if (token) {
-                headers.set('x-csrf-token', token);
+                headers.set('Authorization', `Bearer ${token}`);
             }
             headers.set('Accept-Language', 'en');
             headers.set('Accept', 'application/json');
@@ -91,7 +91,7 @@ const createBaseQuery = (baseUrl: string): BaseQueryFn<string | FetchArgs, unkno
             fetchApi(args, api, extraOptions ?? {}, baseUrl);
 
 export const api = createApi({
-    baseQuery: createBaseQuery('https://jsonplaceholder.typicode.com/'),
+    baseQuery: createBaseQuery(import.meta.env.VITE_BASE_URL),
     endpoints: () => ({}),
 });
 

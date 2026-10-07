@@ -13,6 +13,7 @@ import {
    SendIcon,
    UploadIcon,
 } from "../components/icons";
+import {useLazyGetChatSessionsQuery, useLazyGetRagDocsQuery } from "../services/apis";
 
 type Doc = {
    id: number | string;
@@ -113,6 +114,12 @@ const DUMMY_SESSIONS: ChatSession[] = [
    },
 ];
 
+// The token is saved to localStorage at login (LoginPage) and removed at logout.
+function authHeaders(): HeadersInit {
+   const token = localStorage.getItem("token");
+   return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 function Avatar({ role }: { role: "user" | "ai" }) {
    return (
       <span
@@ -148,6 +155,8 @@ function TypingIndicator() {
 
 export default function RAGSystemUI() {
    const navigate = useNavigate();
+   const [getRagDocs] = useLazyGetRagDocsQuery();
+   const [getChatSessions] = useLazyGetChatSessionsQuery();
 
    const [selectedDoc, setSelectedDoc] = useState<Doc>(DUMMY_DOCUMENTS[1]);
    const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -164,25 +173,19 @@ export default function RAGSystemUI() {
    const messagesEndRef = useRef<HTMLDivElement>(null);
    const dropdownRef = useRef<HTMLDivElement>(null);
 
-   const getData = async () => {
-      // const controller = new AbortController();
-
-      // api.get("/todos/1", {
-      //    signal: controller.signal,
-      // });
-
-      // // cancel when needed
-      // controller.abort();
-      const getRes = await fetch("http://127.0.0.1:8000/api/documents", {
-         method: "GET",
-         // body: formData,
-      });
-      console.log("Upload response status:", getRes.status);
+   const getSessionDocuments = async () => {
+      try {
+         const res = await getRagDocs({}).unwrap();
+         console.log(res);
+      } catch (error) {
+         console.error("Could not load documents:", error);
+      }
    }
 
    useEffect(() => {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-      getData();
+      getSessionDocuments();
+   // eslint-disable-next-line react-hooks/exhaustive-deps
    }, [messages, isTyping]);
 
    useEffect(() => {
@@ -251,13 +254,12 @@ export default function RAGSystemUI() {
       try {
          console.log("Uploading file:", file.name);
 
-         const response = await fetch("http://127.0.0.1:8000/api/upload", {
+         const response = await fetch("http://127.0.0.1:8000/rag/documents/upload", {
             method: "POST",
+            headers: authHeaders(), // no Content-Type: the browser sets the multipart boundary itself
             body: formData,
          });
          console.log("Upload response status:", response.status);
-
-
          if (!response.ok) {
             const err = await response.json();
             throw new Error(err.detail || "Upload failed");
