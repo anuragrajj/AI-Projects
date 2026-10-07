@@ -132,7 +132,13 @@ def generate_answer(question: str, chunks: list[str], history: list[dict]) -> st
     if not chunks:
         return "I couldn't find any indexed content for this document yet. It may still be processing, or processing may have failed."
 
-    excerpts = "\n\n".join(f'<excerpt index="{i}">\n{chunk}\n</excerpt>' for i, chunk in enumerate(chunks, 1))
+    if settings.USE_DUMMY_ANSWERS:
+        return (
+            f'Dummy answer (the LLM is not connected yet). You asked: "{question}". '
+            f"I found {len(chunks)} matching excerpt(s) in the document."
+        )
+
+    excerpts ="\n\n".join(f'<excerpt index="{i}">\n{chunk}\n</excerpt>' for i, chunk in enumerate(chunks, 1))
     response = _anthropic().beta.messages.create(
         model=CHAT_MODEL,
         max_tokens=16000,

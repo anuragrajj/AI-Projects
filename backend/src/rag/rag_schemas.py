@@ -15,6 +15,7 @@ class DocumentOut(BaseModel):
 
 class ChatSessionCreate(BaseModel):
     title: Optional[str] = None
+    document_id: Optional[UUID] = None
 
 class ChatSessionUpdate(BaseModel):
     document_id: Optional[UUID] = None
@@ -27,6 +28,7 @@ class ChatSessionOut(BaseModel):
     title: Optional[str]
     started_at: Optional[datetime]
     created_at: datetime
+    updated_at: datetime
     class Config: from_attributes = True
 
 class MessageCreate(BaseModel):

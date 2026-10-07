@@ -15,5 +15,9 @@ class Settings:
     EMBEDDING_MODEL: str = "multilingual-e5-large"  # hosted by Pinecone, so the Pinecone key covers embeddings too
     EMBEDDING_DIMENSION: int = 1024  # must match the model above; the index is created with this size
 
+    # While True, chat replies are a placeholder instead of a real LLM answer.
+    # Set to False once ANTHROPIC_API_KEY is in .env.
+    USE_DUMMY_ANSWERS: bool = True
+
 
 settings = Settings()

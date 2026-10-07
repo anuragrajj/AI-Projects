@@ -6,6 +6,7 @@ import type { BaseQueryFn, FetchArgs, FetchBaseQueryError } from '@reduxjs/toolk
 
 interface ExtraOptions {
     appLoader?: boolean;
+    timeout?: number; // ms; defaults to 30s
 }
 
 interface ApiCallLog {
@@ -38,7 +39,7 @@ const fetchApi = async (
 
     console.log('%cAPI Call Details:', 'color: dodgerblue; font-weight: bold', logDetails);
 
-    const timeout = 30000;
+    const timeout = extraOptions.timeout ?? 30000;
     const timeoutPromise = new Promise<never>((_, reject) =>
         setTimeout(() => reject(new Error('Request Timeout')), timeout),
     );

@@ -13,106 +13,58 @@ import {
    SendIcon,
    UploadIcon,
 } from "../components/icons";
-import {useLazyGetChatSessionsQuery, useLazyGetRagDocsQuery } from "../services/apis";
+import {
+   useCreateChatSessionMutation,
+   useDeleteChatSessionMutation,
+   useLazyGetChatSessionsQuery,
+   useLazyGetRagDocsQuery,
+   useLazyGetSessionDocumentQuery,
+   useLazyGetSessionMessagesQuery,
+   useSendChatMessageMutation,
+} from "../services/apis";
 
 type Doc = {
-   id: number | string;
+   id: string;
    name: string;
    chunks?: number;
 };
 
 type ChatMessage = {
-   id: number;
+   id: string;
    role: "user" | "ai";
    content: string;
-   userId: string;
 };
 
 type ChatSession = {
    id: string;
    title: string;
-   docName: string;
-   messages: ChatMessage[];
+   documentId: string | null;
    updatedAt: number;
 };
 
-const DUMMY_DOCUMENTS: Doc[] = [
-   { id: 1, name: "Product Manual v2.pdf" },
-   { id: 2, name: "Q3 Financial Report.pdf" },
-   { id: 3, name: "Research Paper - NLP.pdf" },
-   { id: 4, name: "Company Policy 2024.pdf" },
-];
+// Shapes the backend returns (backend/src/rag/rag_schemas.py).
+type DocumentDto = { id: string; file_name: string; chunk_count: number };
+type SessionDto = { id: string; title: string | null; document_id: string | null; updated_at: string };
+type MessageDto = { id: string; role: "user" | "assistant"; content: string };
 
-const NOW = Date.now();
-const DAY = 86_400_000;
+const toDoc = (d: DocumentDto): Doc => ({ id: d.id, name: d.file_name, chunks: d.chunk_count });
+const toSession = (s: SessionDto): ChatSession => ({
+   id: s.id,
+   title: s.title || "New chat",
+   documentId: s.document_id,
+   updatedAt: Date.parse(s.updated_at),
+});
+const toMessage = (m: MessageDto): ChatMessage => ({
+   id: m.id,
+   role: m.role === "user" ? "user" : "ai",
+   content: m.content,
+});
 
-// Dummy chat history — replace with real sessions from your backend later.
-const DUMMY_SESSIONS: ChatSession[] = [
-   {
-      id: "s-1",
-      title: "Q3 revenue drivers",
-      docName: "Q3 Financial Report.pdf",
-      updatedAt: NOW - 3 * 60 * 1000,
-      messages: [
-         { id: 1, role: "user", content: "What were the main revenue drivers in Q3?", userId: "abc" },
-         { id: 2, role: "ai", content: "Q3 revenue grew 18% QoQ, led by enterprise subscriptions (+31%) with a smaller lift from professional services (+7%). Net churn held flat at 1.9%.", userId: "abc" },
-         { id: 3, role: "user", content: "How did that compare to the forecast?", userId: "abc" },
-         { id: 4, role: "ai", content: "It landed roughly 4% ahead of the mid-point forecast of $42.1M, mostly because two enterprise deals pulled forward from Q4.", userId: "abc" },
-      ],
-   },
-   {
-      id: "s-2",
-      title: "Remote work eligibility",
-      docName: "Company Policy 2024.pdf",
-      updatedAt: NOW - 55 * 60 * 1000,
-      messages: [
-         { id: 1, role: "user", content: "Who is eligible for fully remote work?", userId: "abc" },
-         { id: 2, role: "ai", content: "Per section 4.2, employees with 6+ months tenure in a role designated 'location-flexible' may request fully remote status, subject to manager approval.", userId: "abc" },
-      ],
-   },
-   {
-      id: "s-3",
-      title: "NLP paper — evaluation setup",
-      docName: "Research Paper - NLP.pdf",
-      updatedAt: NOW - DAY - 2 * 3600 * 1000,
-      messages: [
-         { id: 1, role: "user", content: "Summarize the evaluation methodology.", userId: "abc" },
-         { id: 2, role: "ai", content: "They evaluate on GLUE plus two in-house datasets, reporting the mean of 5 seeds. Significance is tested with McNemar's test; both accuracy and macro-F1 are reported.", userId: "abc" },
-         { id: 3, role: "user", content: "What baselines did they use?", userId: "abc" },
-         { id: 4, role: "ai", content: "A fine-tuned BERT-base and a frozen-encoder linear probe. Their method beats BERT-base by 2.3 macro-F1 on average.", userId: "abc" },
-      ],
-   },
-   {
-      id: "s-4",
-      title: "First-time product setup",
-      docName: "Product Manual v2.pdf",
-      updatedAt: NOW - DAY - 9 * 3600 * 1000,
-      messages: [
-         { id: 1, role: "user", content: "What are the first-time setup steps?", userId: "abc" },
-         { id: 2, role: "ai", content: "1) Mount the base unit, 2) connect power and wait for the amber LED, 3) pair via the mobile app, 4) run the calibration wizard. Full details are in chapter 2.", userId: "abc" },
-      ],
-   },
-   {
-      id: "s-5",
-      title: "Efficiency methodology claim",
-      docName: "Q3 Financial Report.pdf",
-      updatedAt: NOW - 4 * DAY,
-      messages: [
-         { id: 1, role: "user", content: "Where does the 23% efficiency figure come from?", userId: "abc" },
-         { id: 2, role: "ai", content: "From the operations appendix: a pilot across 3 sites measured a 23% reduction in average handling time after the new workflow, versus the prior quarter's baseline.", userId: "abc" },
-      ],
-   },
-   {
-      id: "s-6",
-      title: "New-hire equipment policy",
-      docName: "Company Policy 2024.pdf",
-      updatedAt: NOW - 12 * DAY,
-      messages: [
-         { id: 1, role: "user", content: "What equipment does a new hire receive?", userId: "abc" },
-         { id: 2, role: "ai", content: "A laptop (Mac or Windows), one external monitor, and a $150 accessories stipend. Anything above that goes through IT procurement.", userId: "abc" },
-      ],
-   },
-];
+// FastAPI puts the reason for a failed request in `detail`.
+function errorMessage(error: unknown, fallback: string): string {
+   const detail = (error as { data?: { detail?: unknown } } | undefined)?.data?.detail;
+   return typeof detail === "string" ? detail : fallback;
+}
 
 // The token is saved to localStorage at login (LoginPage) and removed at logout.
 function authHeaders(): HeadersInit {
@@ -157,35 +109,61 @@ export default function RAGSystemUI() {
    const navigate = useNavigate();
    const [getRagDocs] = useLazyGetRagDocsQuery();
    const [getChatSessions] = useLazyGetChatSessionsQuery();
+   const [getSessionDocument] = useLazyGetSessionDocumentQuery();
+   const [getSessionMessages] = useLazyGetSessionMessagesQuery();
+   const [createChatSession] = useCreateChatSessionMutation();
+   const [deleteChatSession] = useDeleteChatSessionMutation();
+   const [sendChatMessage] = useSendChatMessageMutation();
 
-   const [selectedDoc, setSelectedDoc] = useState<Doc>(DUMMY_DOCUMENTS[1]);
-   const [dropdownOpen, setDropdownOpen] = useState(false);
-   const [uploadedDocs, setUploadedDocs] = useState<Doc[]>(DUMMY_DOCUMENTS);
-   const [messages, setMessages] = useState<ChatMessage[]>(DUMMY_SESSIONS[0].messages);
-
-   const [sessions, setSessions] = useState<ChatSession[]>(DUMMY_SESSIONS);
-   const [activeSessionId, setActiveSessionId] = useState<string>(DUMMY_SESSIONS[0].id);
+   const [sessions, setSessions] = useState<ChatSession[]>([]);
+   // Three states: nothing open (both empty), a saved chat (activeSessionId), or a new chat being set up (isNewChat).
+   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+   const [isNewChat, setIsNewChat] = useState(false);
    const [sidebarOpen, setSidebarOpen] = useState(true);
 
+   // The document list is only loaded and shown for a new chat; a saved chat shows just its own document.
+   const [documents, setDocuments] = useState<Doc[]>([]);
+   const [selectedDoc, setSelectedDoc] = useState<Doc | null>(null);
+   const [dropdownOpen, setDropdownOpen] = useState(false);
+   const [isUploading, setIsUploading] = useState(false);
+
+   const [messages, setMessages] = useState<ChatMessage[]>([]);
    const [input, setInput] = useState("");
-   const [isTyping, setIsTyping] = useState(false);
+   const [isLoadingChat, setIsLoadingChat] = useState(false);
+   // The chat waiting for an answer: a session id, or "new" until that chat's session exists.
+   const [pendingChat, setPendingChat] = useState<string | null>(null);
+
+   // Same value as the open chat, readable from async callbacks so a late response never lands in another chat.
+   const openChatRef = useRef<string | null>(null);
    const fileInputRef = useRef<HTMLInputElement>(null);
+   const textareaRef = useRef<HTMLTextAreaElement>(null);
    const messagesEndRef = useRef<HTMLDivElement>(null);
    const dropdownRef = useRef<HTMLDivElement>(null);
 
-   const getSessionDocuments = async () => {
-      try {
-         const res = await getRagDocs({}).unwrap();
-         console.log(res);
-      } catch (error) {
-         console.error("Could not load documents:", error);
-      }
-   }
+   const isTyping = pendingChat !== null && pendingChat === (activeSessionId ?? (isNewChat ? "new" : null));
+   const canChat = selectedDoc !== null && !isLoadingChat;
+
+   const openChat = (sessionId: string | null, newChat = false) => {
+      openChatRef.current = sessionId ?? (newChat ? "new" : null);
+      setActiveSessionId(sessionId);
+      setIsNewChat(newChat);
+      setSelectedDoc(null);
+      setMessages([]);
+      setInput("");
+      setDropdownOpen(false);
+      setIsLoadingChat(false);
+   };
+
+   // 1. On open: load the user's chats into the sidebar.
+   useEffect(() => {
+      getChatSessions({})
+         .unwrap()
+         .then((res: SessionDto[]) => setSessions(res.map(toSession)))
+         .catch((error) => console.error("Could not load chats:", error));
+   }, [getChatSessions]);
 
    useEffect(() => {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-      getSessionDocuments();
-   // eslint-disable-next-line react-hooks/exhaustive-deps
    }, [messages, isTyping]);
 
    useEffect(() => {
@@ -198,35 +176,85 @@ export default function RAGSystemUI() {
       return () => document.removeEventListener("mousedown", handleClickOutside);
    }, []);
 
-   // Keep the active session's transcript in sync with the visible messages.
-   useEffect(() => {
-      setSessions((prev) =>
-         prev.map((s) => {
-            if (s.id !== activeSessionId) return s;
-            const firstUser = messages.find((m) => m.role === "user");
-            const title = s.title === "New chat" && firstUser ? firstUser.content.slice(0, 40) : s.title;
-            return { ...s, messages, title };
-         })
-      );
-   }, [messages, activeSessionId]);
+   // 2. Clicking a chat: fetch the document it is connected to (pre-selected) and its messages.
+   const selectSession = async (id: string) => {
+      openChat(id);
+      setIsLoadingChat(true);
+      try {
+         const [doc, history]: [DocumentDto | null, MessageDto[]] = await Promise.all([
+            getSessionDocument({ pathParam: `${id}/document` }).unwrap(),
+            getSessionMessages({ pathParam: `${id}/messages` }).unwrap(),
+         ]);
+         if (openChatRef.current !== id) return; // another chat was opened while this one loaded
+         setSelectedDoc(doc ? toDoc(doc) : null);
+         setMessages(history.map(toMessage));
+         setIsLoadingChat(false);
+      } catch (error) {
+         console.error("Could not load chat:", error);
+         if (openChatRef.current !== id) return;
+         setIsLoadingChat(false);
+         alert(errorMessage(error, "Could not load this chat"));
+      }
+   };
 
-   const handleSend = () => {
-      if (!input.trim()) return;
-      const userMsg: ChatMessage = { id: Date.now(), role: "user", content: input, userId: "abc" };
-      setMessages((prev) => [...prev, userMsg]);
+   // 3. New chat: the only place the document list and the upload button are shown.
+   const newChat = async () => {
+      openChat(null, true);
+      try {
+         const res: DocumentDto[] = await getRagDocs({ status: "ready" }).unwrap();
+         setDocuments(res.map(toDoc));
+      } catch (error) {
+         console.error("Could not load documents:", error);
+      }
+   };
+
+   const handleSend = async () => {
+      const content = input.trim();
+      if (!content || !selectedDoc || !canChat || pendingChat) return;
+
+      let chat = activeSessionId ?? "new";
       setInput("");
-      setIsTyping(true);
+      if (textareaRef.current) textareaRef.current.style.height = "auto";
+      setPendingChat(chat);
+      setMessages((prev) => [...prev, { id: `local-${Date.now()}`, role: "user", content }]);
 
-      setTimeout(() => {
-         setIsTyping(false);
-         const aiMsg: ChatMessage = {
-            id: Date.now() + 1,
-            role: "ai",
-            content: `Based on "${selectedDoc.name}", here's what I found: This is a placeholder AI response. Integrate your RAG pipeline here to return real answers from the document.`,
-            userId: "abc",
-         };
-         setMessages((prev) => [...prev, aiMsg]);
-      }, 1800);
+      try {
+         let sessionId = activeSessionId;
+         if (!sessionId) {
+            // First message of a new chat: create its session, connected to the chosen document.
+            const created: SessionDto = await createChatSession({
+               title: content.slice(0, 40),
+               document_id: selectedDoc.id,
+            }).unwrap();
+            sessionId = created.id;
+            chat = created.id;
+            setSessions((prev) => [toSession(created), ...prev]);
+            setPendingChat(created.id);
+            if (openChatRef.current === "new") {
+               // Still on the new-chat screen: it now becomes this saved chat (document locked in).
+               openChatRef.current = created.id;
+               setActiveSessionId(created.id);
+               setIsNewChat(false);
+               setDropdownOpen(false);
+            }
+         }
+
+         const reply: MessageDto = await sendChatMessage({ pathParam: `${sessionId}/messages`, content }).unwrap();
+         if (openChatRef.current === sessionId) setMessages((prev) => [...prev, toMessage(reply)]);
+         setSessions((prev) => {
+            const current = prev.find((s) => s.id === sessionId);
+            if (!current) return prev;
+            return [{ ...current, updatedAt: Date.now() }, ...prev.filter((s) => s.id !== sessionId)];
+         });
+      } catch (error) {
+         console.error("Could not send message:", error);
+         if (openChatRef.current === chat) {
+            const text = errorMessage(error, "Sorry, I couldn't get an answer. Please try again.");
+            setMessages((prev) => [...prev, { id: `error-${Date.now()}`, role: "ai", content: text }]);
+         }
+      } finally {
+         setPendingChat(null);
+      }
    };
 
    const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -237,12 +265,10 @@ export default function RAGSystemUI() {
    };
 
    const handleFileUpload = async (e: ChangeEvent<HTMLInputElement>) => {
-      console.log("File input changed:", e.target.files);
-
       const file = e.target.files?.[0];
+      e.target.value = ""; // so picking the same file again still fires onChange
       if (!file) return;
 
-      // Optional: basic validation
       if (file.type !== "application/pdf") {
          alert("Only PDF files allowed");
          return;
@@ -251,93 +277,53 @@ export default function RAGSystemUI() {
       const formData = new FormData();
       formData.append("file", file); // MUST match FastAPI param
 
+      setIsUploading(true);
       try {
-         console.log("Uploading file:", file.name);
-
-         const response = await fetch("http://127.0.0.1:8000/rag/documents/upload", {
+         const response = await fetch(new URL("rag/documents/upload", import.meta.env.VITE_BASE_URL), {
             method: "POST",
             headers: authHeaders(), // no Content-Type: the browser sets the multipart boundary itself
             body: formData,
          });
-         console.log("Upload response status:", response.status);
          if (!response.ok) {
-            const err = await response.json();
-            throw new Error(err.detail || "Upload failed");
+            const err = await response.json().catch(() => null);
+            throw new Error(typeof err?.detail === "string" ? err.detail : "Upload failed");
          }
 
-         const data = await response.json();
-
-         // Use backend response
-         const newDoc: Doc = {
-            id: data.doc_id,
-            name: data.filename,
-            chunks: data.chunk_count,
-         };
-
-         setUploadedDocs((prev) => [...prev, newDoc]);
-         setSelectedDoc(newDoc);
-
+         const newDoc = toDoc(await response.json());
+         setDocuments((prev) => [newDoc, ...prev]);
+         if (openChatRef.current === "new") setSelectedDoc(newDoc);
       } catch (error) {
          console.error(error);
          alert(error instanceof Error ? error.message : "Upload failed");
+      } finally {
+         setIsUploading(false);
       }
-
-      e.target.value = "";
    };
 
-   // ── Session management (dummy) ──
-   const selectSession = (id: string) => {
-      const session = sessions.find((s) => s.id === id);
-      if (!session) return;
-      setActiveSessionId(id);
-      setMessages(session.messages);
-      setInput("");
-      const doc = uploadedDocs.find((d) => d.name === session.docName);
-      if (doc) setSelectedDoc(doc);
-   };
-
-   const newChat = () => {
-      const fresh: ChatSession = {
-         id: `s-${Date.now()}`,
-         title: "New chat",
-         docName: selectedDoc.name,
-         messages: [],
-         updatedAt: Date.now(),
-      };
-      setSessions((prev) => [fresh, ...prev]);
-      setActiveSessionId(fresh.id);
-      setMessages([]);
-      setInput("");
-   };
-
-   const deleteSession = (id: string) => {
-      const next = sessions.filter((s) => s.id !== id);
-      if (next.length === 0) {
-         const fresh: ChatSession = {
-            id: `s-${Date.now()}`,
-            title: "New chat",
-            docName: selectedDoc.name,
-            messages: [],
-            updatedAt: Date.now(),
-         };
-         setSessions([fresh]);
-         setActiveSessionId(fresh.id);
-         setMessages([]);
+   const deleteSession = async (id: string) => {
+      try {
+         await deleteChatSession({ pathParam: id }).unwrap();
+      } catch (error) {
+         alert(errorMessage(error, "Could not delete this chat"));
          return;
       }
-      setSessions(next);
-      if (id === activeSessionId) {
-         setActiveSessionId(next[0].id);
-         setMessages(next[0].messages);
-      }
+      setSessions((prev) => prev.filter((s) => s.id !== id));
+      if (openChatRef.current === id) openChat(null);
    };
+
+   const hasChatOpen = activeSessionId !== null || isNewChat;
+   let emptyHint = "Pick a chat from the sidebar, or start a new one.";
+   if (isLoadingChat) emptyHint = "Loading chat…";
+   else if (selectedDoc) emptyHint = `Answers are grounded in ${selectedDoc.name}`;
+   else if (isNewChat) emptyHint = "Choose a document above, or upload a PDF, to begin.";
+   else if (activeSessionId) emptyHint = "The document for this chat is no longer available.";
 
    return (
       <div className="relative flex h-screen overflow-hidden bg-canvas text-ink-muted">
          {/* ── Chat session rail ── */}
          <ChatSessionSidebar
             sessions={sessions}
-            activeId={activeSessionId}
+            activeId={activeSessionId ?? ""}
             open={sidebarOpen}
             onToggle={() => setSidebarOpen((v) => !v)}
             onSelect={selectSession}
@@ -359,67 +345,89 @@ export default function RAGSystemUI() {
                   </button>
                )}
 
-               <span className="label mr-1 hidden sm:block">Context</span>
+               {isNewChat ? (
+                  <>
+                     <span className="label mr-1 hidden sm:block">Context</span>
 
-               {/* Document Dropdown */}
-               <div className="relative" ref={dropdownRef}>
-                  <button
-                     onClick={() => setDropdownOpen((o) => !o)}
-                     className="flex min-w-[14rem] items-center gap-2.5 rounded-lg border border-line bg-surface-raised px-3 py-2 text-[13px] text-ink transition-colors duration-150 hover:border-line-strong"
-                  >
-                     <FileIcon className="h-4 w-4 shrink-0 text-accent" />
-                     <span className="flex-1 truncate text-left">{selectedDoc.name}</span>
-                     <ChevronDownIcon
-                        className={`h-3.5 w-3.5 shrink-0 text-ink-dim transition-transform duration-150 ${
-                           dropdownOpen ? "rotate-180" : ""
-                        }`}
-                     />
-                  </button>
+                     {/* Document Dropdown */}
+                     <div className="relative" ref={dropdownRef}>
+                        <button
+                           onClick={() => setDropdownOpen((o) => !o)}
+                           className="flex min-w-[14rem] items-center gap-2.5 rounded-lg border border-line bg-surface-raised px-3 py-2 text-[13px] text-ink transition-colors duration-150 hover:border-line-strong"
+                        >
+                           <FileIcon className="h-4 w-4 shrink-0 text-accent" />
+                           <span className="flex-1 truncate text-left">{selectedDoc?.name ?? "Select a document"}</span>
+                           <ChevronDownIcon
+                              className={`h-3.5 w-3.5 shrink-0 text-ink-dim transition-transform duration-150 ${
+                                 dropdownOpen ? "rotate-180" : ""
+                              }`}
+                           />
+                        </button>
 
-                  {dropdownOpen && (
-                     <div className="absolute left-0 top-full z-30 mt-2 w-80 animate-fade-up overflow-hidden rounded-xl border border-line bg-surface-raised shadow-pop">
-                        <div className="border-b border-line px-3 py-2.5">
-                           <p className="label">Select document</p>
-                        </div>
-                        <div className="max-h-64 overflow-y-auto p-1">
-                           {uploadedDocs.map((doc) => (
-                              <button
-                                 key={doc.id}
-                                 onClick={() => { setSelectedDoc(doc); setDropdownOpen(false); }}
-                                 className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-[13px] transition-colors duration-150 ${
-                                    selectedDoc.id === doc.id
-                                       ? "bg-surface-hover text-ink"
-                                       : "text-ink-muted hover:bg-surface-hover hover:text-ink"
-                                 }`}
-                              >
-                                 <FileIcon className="h-4 w-4 shrink-0 text-ink-faint" />
-                                 <span className="truncate">{doc.name}</span>
-                                 {selectedDoc.id === doc.id && (
-                                    <CheckIcon className="ml-auto h-3.5 w-3.5 shrink-0 text-accent" />
+                        {dropdownOpen && (
+                           <div className="absolute left-0 top-full z-30 mt-2 w-80 animate-fade-up overflow-hidden rounded-xl border border-line bg-surface-raised shadow-pop">
+                              <div className="border-b border-line px-3 py-2.5">
+                                 <p className="label">Select document</p>
+                              </div>
+                              <div className="max-h-64 overflow-y-auto p-1">
+                                 {documents.length === 0 && (
+                                    <p className="px-3 py-4 text-[12.5px] text-ink-faint">No documents yet. Upload a PDF to begin.</p>
                                  )}
-                              </button>
-                           ))}
-                        </div>
+                                 {documents.map((doc) => (
+                                    <button
+                                       key={doc.id}
+                                       onClick={() => { setSelectedDoc(doc); setDropdownOpen(false); }}
+                                       className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-[13px] transition-colors duration-150 ${
+                                          selectedDoc?.id === doc.id
+                                             ? "bg-surface-hover text-ink"
+                                             : "text-ink-muted hover:bg-surface-hover hover:text-ink"
+                                       }`}
+                                    >
+                                       <FileIcon className="h-4 w-4 shrink-0 text-ink-faint" />
+                                       <span className="truncate">{doc.name}</span>
+                                       {selectedDoc?.id === doc.id && (
+                                          <CheckIcon className="ml-auto h-3.5 w-3.5 shrink-0 text-accent" />
+                                       )}
+                                    </button>
+                                 ))}
+                              </div>
+                           </div>
+                        )}
                      </div>
-                  )}
-               </div>
 
-               {/* Upload Button */}
-               <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="flex items-center gap-2 rounded-lg bg-accent px-3.5 py-2 text-[13px] font-semibold text-accent-fg transition-colors duration-150 hover:bg-accent-hover"
-               >
-                  <UploadIcon className="h-4 w-4" />
-                  Upload PDF
-               </button>
-               <input ref={fileInputRef} type="file" accept=".pdf" className="hidden" onChange={handleFileUpload} />
+                     {/* Upload Button */}
+                     <button
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={isUploading}
+                        className="flex items-center gap-2 rounded-lg bg-accent px-3.5 py-2 text-[13px] font-semibold text-accent-fg transition-colors duration-150 hover:bg-accent-hover disabled:bg-surface-hover disabled:text-ink-faint"
+                     >
+                        <UploadIcon className="h-4 w-4" />
+                        {isUploading ? "Uploading…" : "Upload PDF"}
+                     </button>
+                     <input ref={fileInputRef} type="file" accept=".pdf" className="hidden" onChange={handleFileUpload} />
 
-               <div className="ml-auto flex items-center gap-2 text-[12px] text-ink-dim">
-                  <InfoIcon className="h-3.5 w-3.5" />
-                  <span className="tabular">
-                     {uploadedDocs.length} document{uploadedDocs.length !== 1 ? "s" : ""} loaded
-                  </span>
-               </div>
+                     <div className="ml-auto flex items-center gap-2 text-[12px] text-ink-dim">
+                        <InfoIcon className="h-3.5 w-3.5" />
+                        <span className="tabular">
+                           {documents.length} document{documents.length !== 1 ? "s" : ""} loaded
+                        </span>
+                     </div>
+                  </>
+               ) : activeSessionId ? (
+                  <>
+                     <span className="label mr-1 hidden sm:block">Context</span>
+
+                     {/* A saved chat stays with its document, so it is shown but can't be switched. */}
+                     <div className="flex min-w-[14rem] items-center gap-2.5 rounded-lg border border-line bg-surface-raised px-3 py-2 text-[13px] text-ink">
+                        <FileIcon className="h-4 w-4 shrink-0 text-accent" />
+                        <span className="flex-1 truncate">
+                           {isLoadingChat ? "Loading…" : selectedDoc?.name ?? "Document no longer available"}
+                        </span>
+                     </div>
+                  </>
+               ) : (
+                  <span className="label py-2">Select a chat or start a new one</span>
+               )}
             </div>
 
             {/* ── Chat Area ── */}
@@ -431,17 +439,14 @@ export default function RAGSystemUI() {
                            <MessageIcon className="h-5 w-5" />
                         </span>
                         <p className="mt-5 font-display text-[17px] font-semibold tracking-tight text-ink">
-                           Ask anything about your document
+                           {hasChatOpen ? "Ask anything about your document" : "Your document chats"}
                         </p>
-                        <p className="mt-2 text-[13px] text-ink-dim">
-                           Answers are grounded in{" "}
-                           <span className="text-ink-muted">{selectedDoc.name}</span>
-                        </p>
+                        <p className="mt-2 text-[13px] text-ink-dim">{emptyHint}</p>
                      </div>
                   ) : (
                      <div className="mb-8 flex items-center gap-2.5 border-b border-line pb-4">
                         <FileIcon className="h-3.5 w-3.5 shrink-0 text-ink-faint" />
-                        <p className="label truncate">Chatting with {selectedDoc.name}</p>
+                        <p className="label truncate">Chatting with {selectedDoc?.name ?? "a deleted document"}</p>
                      </div>
                   )}
 
@@ -460,7 +465,7 @@ export default function RAGSystemUI() {
                                     {isUser ? "You" : "DocMind AI"}
                                  </p>
                                  <div
-                                    className={`rounded-xl border px-4 py-3 text-[14px] leading-[1.7] text-ink ${
+                                    className={`whitespace-pre-wrap rounded-xl border px-4 py-3 text-[14px] leading-[1.7] text-ink ${
                                        isUser
                                           ? "rounded-tr-sm border-accent/30 bg-accent-soft"
                                           : "rounded-tl-sm border-line bg-surface"
@@ -486,21 +491,23 @@ export default function RAGSystemUI() {
                <div className="mx-auto max-w-2xl">
                   <div className="flex items-end gap-2.5 rounded-xl border border-line bg-surface-raised px-4 py-3 transition-colors duration-150 focus-within:border-accent/50">
                      <textarea
+                        ref={textareaRef}
                         rows={1}
                         value={input}
+                        disabled={!canChat}
                         onChange={(e) => {
                            setInput(e.target.value);
                            e.target.style.height = "auto";
                            e.target.style.height = Math.min(e.target.scrollHeight, 120) + "px";
                         }}
                         onKeyDown={handleKeyDown}
-                        placeholder={`Ask anything about ${selectedDoc.name}…`}
+                        placeholder={selectedDoc ? `Ask anything about ${selectedDoc.name}…` : emptyHint}
                         className="w-full resize-none bg-transparent py-1 text-[14px] leading-relaxed text-ink outline-none placeholder:text-ink-faint"
                         style={{ maxHeight: "120px" }}
                      />
                      <button
                         onClick={handleSend}
-                        disabled={!input.trim() || isTyping}
+                        disabled={!input.trim() || !canChat || pendingChat !== null}
                         aria-label="Send message"
                         className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-accent text-accent-fg transition-colors duration-150 hover:bg-accent-hover disabled:bg-surface-hover disabled:text-ink-faint"
                      >

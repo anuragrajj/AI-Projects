@@ -69,9 +69,18 @@ def delete_document(document_id: UUID, db: Session = Depends(get_db), current_us
 
 # ---------- Chat sessions ----------
 
+def _get_user_document(db: Session, document_id: UUID, user_id: int):
+    document = db.query(rag_models.Document).filter_by(id=document_id, user_id=user_id).first()
+    if not document:
+        raise HTTPException(404, "Document not found")
+    return document
+
+
 @rag_router.post("/chat/sessions", response_model=rag_schemas.ChatSessionOut)
 def create_session(payload: rag_schemas.ChatSessionCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    session = rag_models.ChatSession(user_id=current_user.id, title=payload.title)
+    if payload.document_id is not None:
+        _get_user_document(db, payload.document_id, current_user.id)
+    session = rag_models.ChatSession(user_id=current_user.id, title=payload.title, document_id=payload.document_id)
     db.add(session)
     db.commit()
     db.refresh(session)
@@ -92,12 +101,33 @@ def update_session(session_id: UUID, payload: rag_schemas.ChatSessionUpdate, db:
     if payload.document_id is not None:
         if session.started_at is not None:
             raise HTTPException(409, "Chat already started — create a new session to use a different document")
+        _get_user_document(db, payload.document_id, current_user.id)
         session.document_id = payload.document_id
     if payload.title is not None:
         session.title = payload.title
     db.commit()
     db.refresh(session)
     return session
+
+
+@rag_router.get("/chat/sessions/{session_id}/document", response_model=rag_schemas.DocumentOut | None)
+def get_session_document(session_id: UUID, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    session = db.query(rag_models.ChatSession).filter_by(id=session_id, user_id=current_user.id).first()
+    if not session:
+        raise HTTPException(404, "Session not found")
+    if not session.document_id:
+        return None  # nothing attached yet, or the document was deleted
+    return db.query(rag_models.Document).filter_by(id=session.document_id).first()
+
+
+@rag_router.delete("/chat/sessions/{session_id}")
+def delete_session(session_id: UUID, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    session = db.query(rag_models.ChatSession).filter_by(id=session_id, user_id=current_user.id).first()
+    if not session:
+        raise HTTPException(404, "Session not found")
+    db.delete(session)  # its messages and their sources go with it (ON DELETE CASCADE)
+    db.commit()
+    return {"message": "Session deleted"}
 
 
 # ---------- Messages ----------
@@ -118,6 +148,7 @@ def send_message(session_id: UUID, payload: rag_schemas.MessageCreate, db: Sessi
     db.add(user_message)
     if session.started_at is None:
         session.started_at = func.now()  # the message's created_at is only filled in by the database on commit
+    session.updated_at = func.now()  # keeps the most recently used chat at the top of the sidebar
     db.commit()
 
     results = rag_service.retrieve_context(current_user.id, session.document_id, payload.content)
