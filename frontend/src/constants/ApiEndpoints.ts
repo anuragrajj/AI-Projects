@@ -2,6 +2,7 @@ export const API_ENDPOINTS = {
   AUTH: {
     SEND_OTP: `todos`,
     SEND_PDF: `upload-pdf`,
+    REGISTER: 'auth/register',
   },
   RAG: {
     GET_ALL_DOCS: '/rag/documents',

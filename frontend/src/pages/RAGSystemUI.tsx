@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { ChangeEvent, KeyboardEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import ChatSessionSidebar from "../components/ChatSessionSidebar";
+import DocumentsModal from "../components/DocumentsModal";
 import {
    CheckIcon,
    ChevronDownIcon,
@@ -22,6 +23,11 @@ import {
    useLazyGetSessionMessagesQuery,
    useSendChatMessageMutation,
 } from "../services/apis";
+import { uploadDocument } from "../services/documentApi";
+import type { DocumentDto } from "../services/documentApi";
+import { errorMessage } from "../services/helper";
+import { setLoading } from "../store/slices/LoaderSlice";
+import { useDispatch } from "react-redux";
 
 type Doc = {
    id: string;
@@ -43,7 +49,6 @@ type ChatSession = {
 };
 
 // Shapes the backend returns (backend/src/rag/rag_schemas.py).
-type DocumentDto = { id: string; file_name: string; chunk_count: number };
 type SessionDto = { id: string; title: string | null; document_id: string | null; updated_at: string };
 type MessageDto = { id: string; role: "user" | "assistant"; content: string };
 
@@ -59,18 +64,6 @@ const toMessage = (m: MessageDto): ChatMessage => ({
    role: m.role === "user" ? "user" : "ai",
    content: m.content,
 });
-
-// FastAPI puts the reason for a failed request in `detail`.
-function errorMessage(error: unknown, fallback: string): string {
-   const detail = (error as { data?: { detail?: unknown } } | undefined)?.data?.detail;
-   return typeof detail === "string" ? detail : fallback;
-}
-
-// The token is saved to localStorage at login (LoginPage) and removed at logout.
-function authHeaders(): HeadersInit {
-   const token = localStorage.getItem("token");
-   return token ? { Authorization: `Bearer ${token}` } : {};
-}
 
 function Avatar({ role }: { role: "user" | "ai" }) {
    return (
@@ -114,12 +107,14 @@ export default function RAGSystemUI() {
    const [createChatSession] = useCreateChatSessionMutation();
    const [deleteChatSession] = useDeleteChatSessionMutation();
    const [sendChatMessage] = useSendChatMessageMutation();
+   const dispatch = useDispatch();
 
    const [sessions, setSessions] = useState<ChatSession[]>([]);
    // Three states: nothing open (both empty), a saved chat (activeSessionId), or a new chat being set up (isNewChat).
    const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
    const [isNewChat, setIsNewChat] = useState(false);
    const [sidebarOpen, setSidebarOpen] = useState(true);
+   const [docsOpen, setDocsOpen] = useState(false);
 
    // The document list is only loaded and shown for a new chat; a saved chat shows just its own document.
    const [documents, setDocuments] = useState<Doc[]>([]);
@@ -142,6 +137,9 @@ export default function RAGSystemUI() {
 
    const isTyping = pendingChat !== null && pendingChat === (activeSessionId ?? (isNewChat ? "new" : null));
    const canChat = selectedDoc !== null && !isLoadingChat;
+   // Deleting a document detaches its chats (their document_id becomes null): the history stays readable, but they can't take new messages.
+   const isDocDeleted =
+      activeSessionId !== null && !isLoadingChat && sessions.find((s) => s.id === activeSessionId)?.documentId === null;
 
    const openChat = (sessionId: string | null, newChat = false) => {
       openChatRef.current = sessionId ?? (newChat ? "new" : null);
@@ -187,6 +185,7 @@ export default function RAGSystemUI() {
          ]);
          if (openChatRef.current !== id) return; // another chat was opened while this one loaded
          setSelectedDoc(doc ? toDoc(doc) : null);
+         if (!doc) setSessions((prev) => prev.map((s) => (s.id === id ? { ...s, documentId: null } : s)));
          setMessages(history.map(toMessage));
          setIsLoadingChat(false);
       } catch (error) {
@@ -274,22 +273,11 @@ export default function RAGSystemUI() {
          return;
       }
 
-      const formData = new FormData();
-      formData.append("file", file); // MUST match FastAPI param
+      dispatch(setLoading(true));
 
       setIsUploading(true);
       try {
-         const response = await fetch(new URL("rag/documents/upload", import.meta.env.VITE_BASE_URL), {
-            method: "POST",
-            headers: authHeaders(), // no Content-Type: the browser sets the multipart boundary itself
-            body: formData,
-         });
-         if (!response.ok) {
-            const err = await response.json().catch(() => null);
-            throw new Error(typeof err?.detail === "string" ? err.detail : "Upload failed");
-         }
-
-         const newDoc = toDoc(await response.json());
+         const newDoc = toDoc(await uploadDocument(file));
          setDocuments((prev) => [newDoc, ...prev]);
          if (openChatRef.current === "new") setSelectedDoc(newDoc);
       } catch (error) {
@@ -297,7 +285,21 @@ export default function RAGSystemUI() {
          alert(error instanceof Error ? error.message : "Upload failed");
       } finally {
          setIsUploading(false);
+         dispatch(setLoading(false));
       }
+   };
+
+   // The Docs modal does the upload/delete itself; these keep this page's state in step with it.
+   const handleDocUploaded = (doc: DocumentDto) => {
+      if (doc.status !== "ready") return; // only searchable documents can be chosen as context
+      setDocuments((prev) => [toDoc(doc), ...prev.filter((d) => d.id !== doc.id)]);
+   };
+
+   const handleDocDeleted = (id: string) => {
+      setDocuments((prev) => prev.filter((d) => d.id !== id));
+      // The backend detaches every chat that used this document; mirror that so they stop accepting messages.
+      setSessions((prev) => prev.map((s) => (s.documentId === id ? { ...s, documentId: null } : s)));
+      if (selectedDoc?.id === id) setSelectedDoc(null);
    };
 
    const deleteSession = async (id: string) => {
@@ -316,6 +318,7 @@ export default function RAGSystemUI() {
    if (isLoadingChat) emptyHint = "Loading chat…";
    else if (selectedDoc) emptyHint = `Answers are grounded in ${selectedDoc.name}`;
    else if (isNewChat) emptyHint = "Choose a document above, or upload a PDF, to begin.";
+   else if (isDocDeleted) emptyHint = "Document deleted";
    else if (activeSessionId) emptyHint = "The document for this chat is no longer available.";
 
    return (
@@ -330,7 +333,16 @@ export default function RAGSystemUI() {
             onNewChat={newChat}
             onDelete={deleteSession}
             onHome={() => navigate("/")}
+            onOpenDocs={() => setDocsOpen(true)}
          />
+
+         {docsOpen && (
+            <DocumentsModal
+               onClose={() => setDocsOpen(false)}
+               onUploaded={handleDocUploaded}
+               onDeleted={handleDocDeleted}
+            />
+         )}
 
          <div className="relative z-10 flex min-w-0 flex-1 flex-col">
             {/* ── Toolbar ── */}
@@ -421,7 +433,7 @@ export default function RAGSystemUI() {
                      <div className="flex min-w-[14rem] items-center gap-2.5 rounded-lg border border-line bg-surface-raised px-3 py-2 text-[13px] text-ink">
                         <FileIcon className="h-4 w-4 shrink-0 text-accent" />
                         <span className="flex-1 truncate">
-                           {isLoadingChat ? "Loading…" : selectedDoc?.name ?? "Document no longer available"}
+                           {isLoadingChat ? "Loading…" : selectedDoc?.name ?? (isDocDeleted ? "Document deleted" : "Document no longer available")}
                         </span>
                      </div>
                   </>

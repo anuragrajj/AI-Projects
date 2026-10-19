@@ -152,6 +152,7 @@ def send_message(session_id: UUID, payload: rag_schemas.MessageCreate, db: Sessi
     db.commit()
 
     results = rag_service.retrieve_context(current_user.id, session.document_id, payload.content)
+    print(results);
     chunks = [doc.page_content for doc, _ in results]
     answer = rag_service.generate_answer(payload.content, chunks, history)
 

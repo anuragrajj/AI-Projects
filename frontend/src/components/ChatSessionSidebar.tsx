@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { ArrowLeftIcon, MessageIcon, PanelLeftIcon, PlusIcon, TrashIcon } from "./icons";
+import { ArrowLeftIcon, FileIcon, MessageIcon, PanelLeftIcon, PlusIcon, TrashIcon } from "./icons";
 
 export type SidebarSession = {
    id: string;
@@ -16,6 +16,7 @@ type ChatSessionSidebarProps = {
    onNewChat: () => void;
    onDelete: (id: string) => void;
    onHome: () => void;
+   onOpenDocs: () => void;
 };
 
 const DAY = 86_400_000;
@@ -43,6 +44,7 @@ export default function ChatSessionSidebar({
    onNewChat,
    onDelete,
    onHome,
+   onOpenDocs,
 }: ChatSessionSidebarProps) {
    const groups = useMemo(() => {
       const acc: { label: string; items: SidebarSession[] }[] = [];
@@ -79,6 +81,13 @@ export default function ChatSessionSidebar({
                   <span className="flex-1 truncate px-1 font-display text-[14px] font-semibold tracking-tight text-ink">
                      Chats
                   </span>
+                  <button
+                     onClick={onOpenDocs}
+                     className="flex h-8 shrink-0 items-center gap-1.5 rounded-lg border border-line px-2.5 text-[12.5px] font-medium text-ink-muted transition-colors duration-150 hover:border-line-strong hover:text-ink"
+                  >
+                     <FileIcon className="h-3.5 w-3.5" />
+                     Docs
+                  </button>
                   <IconButton label="Collapse sidebar" onClick={onToggle}>
                      <PanelLeftIcon className="h-4 w-4" />
                   </IconButton>

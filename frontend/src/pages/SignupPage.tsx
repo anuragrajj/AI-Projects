@@ -3,17 +3,34 @@ import type { FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import AuthShell from "../components/AuthShell";
 import { BoltIcon } from "../components/icons";
+import { useRegisterMutation } from "../services/apis";
 
 export default function SignupPage() {
   const navigate = useNavigate();
+  const [register, { isLoading }] = useRegisterMutation();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState("");
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    // TODO: wire up account creation
+    setError("");
+
+    if (password !== confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
+
+    try {
+      await register({ name: name.trim(), email, password }).unwrap();
+      navigate("/login");
+    } catch (err) {
+      // FastAPI puts the reason for a failed request in `detail`.
+      const detail = (err as { data?: { detail?: unknown } } | undefined)?.data?.detail;
+      setError(typeof detail === "string" ? detail : "Could not create account");
+    }
   };
 
   return (
@@ -80,11 +97,24 @@ export default function SignupPage() {
             </span>
           </label>
 
+          {error && (
+            <p
+              role="alert"
+              className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-3.5 py-2.5 text-[12.5px] text-rose-300"
+            >
+              {error}
+            </p>
+          )}
+
           <button
             type="submit"
-            className="w-full rounded-lg bg-accent px-4 py-2.5 text-[13.5px] font-semibold text-accent-fg transition-colors duration-150 hover:bg-accent-hover"
+            disabled={isLoading}
+            className="flex w-full items-center justify-center gap-2 rounded-lg bg-accent px-4 py-2.5 text-[13.5px] font-semibold text-accent-fg transition-colors duration-150 hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-55"
           >
-            Create account
+            {isLoading && (
+              <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-accent-fg/30 border-t-accent-fg" />
+            )}
+            {isLoading ? "Creating account…" : "Create account"}
           </button>
         </form>
 

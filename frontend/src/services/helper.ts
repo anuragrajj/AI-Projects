@@ -1,4 +1,10 @@
 
+// FastAPI puts the reason for a failed request in `detail`.
+export function errorMessage(error: unknown, fallback: string): string {
+   const detail = (error as { data?: { detail?: unknown } } | undefined)?.data?.detail;
+   return typeof detail === "string" ? detail : fallback;
+}
+
 interface MutationArgs {
    pathParam?: string | number;
    params?: Record<string, string>;
