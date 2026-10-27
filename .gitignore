@@ -75,9 +75,10 @@ downloads/
 *.egg
 
 # FastAPI env
-backend-python/.env
-backend-python/.env.*
-backend-python/chroma_db/
+backend/.env
+backend/.env.*
+backend/chroma_db/
+backend/uploads/
 
 # =========================
 # IDEs & EDITORS
